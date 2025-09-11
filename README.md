@@ -1,69 +1,63 @@
-# React + TypeScript + Vite
+# Auto Loan Calculator + Affordability & Risk Demo
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A simple end-to-end demo that:
+- Takes borrower and vehicle info  
+- Computes affordability metrics  
+- Scores risk with a mock ML model  
+- Applies hard rules  
+- (Optionally) queries lender APIs to return ranked offers  
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚗 How It Works (Story Level)
 
-## Expanding the ESLint configuration
+### Borrower Inputs
+- Vehicle price  
+- Down payment  
+- Trade-in value (and payoff)  
+- Fees & tax rate  
+- Term (months)  
+- State  
+- Monthly income  
+- Housing cost  
+- Other debt  
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Features Computed
+- **LTV (Loan-to-Value):** `financedAmount / vehiclePrice`  
+- **DTI (Debt-to-Income):** `(monthlyDebt + housingCost + loanPayment) / monthlyIncome`  
+- **Affordability flag** based on thresholds  
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### AI Risk Model (Demo)
+- Returns **PD (probability of default)** with a confidence score  
+- For now: stub/mock function (extendable to real ML service)  
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+### Rule Engine
+- Enforces hard rules:
+  - Max LTV  
+  - Max DTI  
+  - Minimum income  
+  - Max probability of default  
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### Lender APIs (Optional)
+- Partners receive a minimal profile + risk score  
+- Return offers with APR and terms  
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Offer Ranking
+- Offers are **re-ranked by risk-adjusted APR**:  
+  `adjustedAPR = APR × (1 + PD)`  
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+---
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 🛠️ Tech Stack
+- **React + TypeScript + Vite**  
+- Pure functions for financial math (`src/lib/`)  
+- Hot reload for UI changes  
+- Designed for extension with ML + APIs  
+
+---
+
+## 🚀 Next Steps
+- Add borrower financial inputs to UI  
+- Implement affordability and risk calculations (`affordability.ts`, `risk.ts`, `rules.ts`)  
+- Add simulated lender offers + ranking logic  
+- Connect to real ML model or APIs later
