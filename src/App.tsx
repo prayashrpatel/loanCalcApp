@@ -1,29 +1,35 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './App.css';
 
-import type { LoanConfig, BorrowerProfile, EvaluationResult } from './lib/models';
+import type { LoanConfig, BorrowerProfile, EvaluationResult, Offer } from './lib/models';
 import { computeSalesTax, computeFinancedAmount, buildAmortization, computeSummary } from './lib/loan';
 import { evaluateApplication } from './lib/pipeline';
+import { getTaxPreset } from './lib/tax';
+import { fetchOffers } from './lib/lendersGateway';
+import { decodeVin, type VinInfo } from './lib/vehicle';
 
+// charts
 import {
-  PieChart, Pie, Cell, ResponsiveContainer,
-  LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
+  ResponsiveContainer,
+  PieChart, Pie, Cell,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
 
-const usd = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' });
+const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
 
+// ---- Defaults aligned with your models.ts ----
 const DEFAULT_CFG: LoanConfig = {
   price: 32000,
   down: 2000,
   tradeIn: 0,
-  tradeInPayoff: 0,
-  apr: 6.5,
+  tradeInPayoff: 0,             // << matches your file names
+  apr: 6.5,                     // APR stored as percent in your UI
   termMonths: 60,
-  taxRate: 8.75,
+  taxRate: 8.75,                // percent
   fees: { upfront: 400, financed: 300 },
   extras: { upfront: 0, financed: 0 },
-  taxRule: 'price_minus_tradein',
+  taxRule: 'price_minus_tradein', // 'price_minus_tradein' | 'price_full'
 };
 
 const DEFAULT_BORROWER: BorrowerProfile = {
@@ -33,9 +39,9 @@ const DEFAULT_BORROWER: BorrowerProfile = {
   state: 'CA',
 };
 
-function NumberInput({ label, value, onChange, step = 100, min = 0, hint }: {
-  label: string; value: number; onChange: (v:number)=>void; step?: number; min?: number; hint?: string;
-}) {
+function NumberField({
+  label, value, onChange, step = 100, min = 0,
+}: { label: string; value: number; onChange: (v: number) => void; step?: number; min?: number; }) {
   return (
     <label className="field">
       <span className="label">{label}</span>
@@ -47,178 +53,219 @@ function NumberInput({ label, value, onChange, step = 100, min = 0, hint }: {
         value={Number.isFinite(value) ? value : ''}
         onChange={(e) => onChange(Number(e.target.value))}
       />
-      {hint ? <span className="hint">{hint}</span> : null}
     </label>
   );
 }
 
-/* HERO */
-function HeroSummary({ monthly, financed, termMonths, totalCost }:{
-  monthly: number; financed: number; termMonths: number; totalCost: number;
-}) {
-  const usd = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' });
-  return (
-    <div className="hero area-hero" role="region" aria-label="Loan summary">
-      <div className="hero-title">Auto Loan Calculator</div>
-      <div className="hero-kpis">
-        <div className="kpi kpi-main">
-          <div className="label">Monthly payment</div>
-          <div className="value">{usd.format(monthly)}<span className="unit">/mo</span></div>
-        </div>
-        <div className="kpi">
-          <div className="label">Financed amount</div>
-          <div className="value">{usd.format(financed)}</div>
-        </div>
-        <div className="kpi">
-          <div className="label">Term</div>
-          <div className="value">{termMonths} mo</div>
-        </div>
-        <div className="kpi">
-          <div className="label">All-in cost</div>
-          <div className="value">{usd.format(totalCost)}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* Gauges helpers */
-function clamp01(x:number){ return Math.max(0, Math.min(1, x)); }
-function statusByThreshold(valuePct:number, limits:{good:number; warn:number}) {
-  if (valuePct <= limits.good) return 'good';
-  if (valuePct <= limits.warn) return 'warn';
-  return 'bad';
-}
-function GaugeBar({ label, valuePct, limits, ariaNote }:{
-  label:string; valuePct:number; limits:{good:number; warn:number}; ariaNote?:string;
-}) {
-  const status = statusByThreshold(valuePct, limits);
-  const width = `${clamp01(valuePct / Math.max(limits.warn, 1)) * 100}%`;
-  return (
-    <div className="kv" role="group" aria-label={`${label} ${valuePct.toFixed(1)}% ${ariaNote ?? ''}`}>
-      <span>{label}</span>
-      <strong>{valuePct.toFixed(1)}%</strong>
-      <div className={`gauge gauge-${status}`} aria-hidden="true" style={{ width: '100%' }}>
-        <i style={{ width }} />
-      </div>
-    </div>
-  );
-}
-
-type OfferSortKey = 'recommended' | 'monthly' | 'apr' | 'riskAdjApr' | 'totalCost' | 'term';
-
 export default function App() {
   const [cfg, setCfg] = useState<LoanConfig>(DEFAULT_CFG);
   const [borrower, setBorrower] = useState<BorrowerProfile>(DEFAULT_BORROWER);
-  const [showAll, setShowAll] = useState(false);
-  const [sortBy, setSortBy] = useState<OfferSortKey>('recommended');
-  const [sortDir, setSortDir] = useState<'asc'|'desc'>('asc');
 
-  // math
+  // VIN UI state
+  const [vin, setVin] = useState('');
+  const [vinInfo, setVinInfo] = useState<VinInfo | null>(null);
+  const [vinLoading, setVinLoading] = useState(false);
+  const [vinError, setVinError] = useState<string | null>(null);
+
+  // Offers async state
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [offersLoading, setOffersLoading] = useState(false);
+
+  // Loan math (using functions that exist in lib/loan.ts)
   const salesTax = useMemo(() => computeSalesTax(cfg), [cfg]);
   const financedAmount = useMemo(() => computeFinancedAmount(cfg, salesTax), [cfg, salesTax]);
   const summary = useMemo(() => computeSummary(cfg), [cfg]);
-  const table = useMemo(() => buildAmortization(cfg), [cfg]);
+  const schedule = useMemo(() => buildAmortization(cfg), [cfg]);
 
-  // pipeline
+  // Decision pipeline (function exists in lib/pipeline.ts)
   const evalResult: EvaluationResult = useMemo(() => evaluateApplication(cfg, borrower), [cfg, borrower]);
 
-  // charts
-  const principalPaid = useMemo(() => table.reduce((s, r) => s + r.principal, 0), [table]);
-  const donutData = useMemo(() => ([
-    { name: 'Principal', value: principalPaid },
-    { name: 'Interest', value: summary.totalInterest },
-  ]), [principalPaid, summary.totalInterest]);
-  const balanceSeries = useMemo(() => table.map(r => ({ month: r.period, balance: r.balance })), [table]);
+  // Optional: auto-set tax preset from state
+  useEffect(() => {
+    const p = getTaxPreset(borrower.state);
+    if (p) setCfg((c) => ({ ...c, taxRate: p.ratePct, taxRule: p.rule }));
+  }, [borrower.state]);
 
-  // offers sorting
-  const sortedOffers = useMemo(() => {
-    if (!evalResult.rules.approved || evalResult.offers.length === 0) return [];
-    if (sortBy === 'recommended') return evalResult.offers;
-    const get = (k:OfferSortKey, o:(typeof evalResult.offers)[number]) =>
-      k==='monthly'?o.monthlyPayment: k==='apr'?o.apr: k==='riskAdjApr'?o.riskAdjustedApr:
-      k==='totalCost'?o.totalCost: k==='term'?o.termMonths: 0;
-    const dir = sortDir === 'asc' ? 1 : -1;
-    return [...evalResult.offers].sort((a,b)=> (get(sortBy,a)-get(sortBy,b))*dir);
-  }, [evalResult, sortBy, sortDir]);
+  // Fetch lender offers if approved
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!evalResult.rules.approved) { setOffers([]); return; }
+      setOffersLoading(true);
+      try {
+        const o = await fetchOffers(cfg, borrower);
+        if (alive) setOffers(o);
+      } finally {
+        if (alive) setOffersLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [cfg, borrower, evalResult.rules.approved]);
 
-  function exportAmortCsv() {
-    const header = ['Month','Payment','Interest','Principal','Balance'];
-    const rows = (showAll?table:table.slice(0,24)).map(r=>[
-      r.period, usd.format(r.payment), usd.format(r.interest), usd.format(r.principal), usd.format(r.balance)
-    ]);
-    const csv = [header, ...rows].map(r=>r.join(',')).join('\n');
-    const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download='amortization.csv'; a.click();
-    URL.revokeObjectURL(url);
+  // VIN handler
+  async function onDecodeVin() {
+    if (!vin) return;
+    setVinError(null);
+    setVinLoading(true);
+    try {
+      const info = await decodeVin(vin);
+      setVinInfo(info);
+      if (info.msrp) setCfg((c) => ({ ...c, price: info.msrp! }));
+    } catch (e: any) {
+      setVinError(e?.message ?? 'Failed to decode VIN');
+    } finally {
+      setVinLoading(false);
+    }
   }
 
   return (
     <div className="container">
-      {/* HERO across the top */}
-      <HeroSummary
-        monthly={summary.payment}
-        financed={financedAmount}
-        termMonths={cfg.termMonths}
-        totalCost={summary.totalCost}
-      />
+      <div className="layout">
+        {/* ===== HERO KPI STRIP ===== */}
+        <section className="hero area-hero">
+          <h1 className="hero-title">Auto Loan Calculator</h1>
+          <div className="hero-kpis">
+            <div className="kpi kpi-main">
+              <div className="label">Monthly payment</div>
+              <div className="value">
+                {usd.format(summary.payment)} <span className="unit">/mo</span>
+              </div>
+            </div>
+            <div className="kpi">
+              <div className="label">Financed amount</div>
+              <div className="value">{usd.format(financedAmount)}</div>
+            </div>
+            <div className="kpi">
+              <div className="label">Term</div>
+              <div className="value">{cfg.termMonths} <span className="unit">mo</span></div>
+            </div>
+            <div className="kpi">
+              <div className="label">All-in cost</div>
+              <div className="value">{usd.format(summary.totalCost)}</div>
+            </div>
+          </div>
+        </section>
 
-      <main className="layout">
-        {/* LEFT: Inputs */}
+        {/* ===== LEFT: Vehicle & Pricing ===== */}
         <section className="panel area-inputs">
           <h2>Vehicle & Pricing</h2>
-          <NumberInput label="Vehicle price" value={cfg.price} onChange={(v)=>setCfg({...cfg, price:v})}/>
-          <NumberInput label="Down payment" value={cfg.down} onChange={(v)=>setCfg({...cfg, down:v})}/>
+
+          {/* VIN row */}
+          <div className="vin-row">
+            <label className="field">
+              <span className="label">VIN</span>
+              <input
+                type="text"
+                value={vin}
+                onChange={(e) => setVin(e.target.value.toUpperCase())}
+                placeholder="Enter VIN (e.g., 1HGCM82633A004352)"
+              />
+            </label>
+            <button className="ghost primary vin-btn" onClick={onDecodeVin} disabled={vinLoading || !vin}>
+              {vinLoading ? 'Decoding…' : 'Decode VIN'}
+            </button>
+          </div>
+          {vinInfo && (
+            <p className="vin-info">
+              {vinInfo.year} {vinInfo.make} {vinInfo.model} {vinInfo.trim}
+              {vinInfo.msrp ? ` — MSRP ${usd.format(vinInfo.msrp)}` : ''}
+            </p>
+          )}
+          {vinError && <p className="vin-error">{vinError}</p>}
+
+          <NumberField label="Vehicle price" value={cfg.price} onChange={(v) => setCfg({ ...cfg, price: v })} />
+          <NumberField label="Down payment" value={cfg.down} onChange={(v) => setCfg({ ...cfg, down: v })} />
+
           <div className="two">
-            <NumberInput label="Trade-in value" value={cfg.tradeIn} onChange={(v)=>setCfg({...cfg, tradeIn:v})}/>
-            <NumberInput label="Trade-in payoff" value={cfg.tradeInPayoff} onChange={(v)=>setCfg({...cfg, tradeInPayoff:v})}/>
+            <NumberField label="Trade-in value" value={cfg.tradeIn} onChange={(v) => setCfg({ ...cfg, tradeIn: v })} />
+            <NumberField label="Trade-in payoff" value={cfg.tradeInPayoff} onChange={(v) => setCfg({ ...cfg, tradeInPayoff: v })} />
           </div>
 
           <div className="two">
-            <NumberInput label="Sales tax %" step={0.25} value={cfg.taxRate} onChange={(v)=>setCfg({...cfg, taxRate:v})}/>
+            <NumberField label="Sales tax %" step={0.25} value={cfg.taxRate} onChange={(v) => setCfg({ ...cfg, taxRate: v })} />
             <label className="field">
               <span className="label">Tax rule</span>
-              <select value={cfg.taxRule} onChange={(e)=>setCfg({...cfg, taxRule:e.target.value as LoanConfig['taxRule']})}>
+              <select
+                value={cfg.taxRule}
+                onChange={(e) => setCfg({ ...cfg, taxRule: e.target.value as LoanConfig['taxRule'] })}
+              >
                 <option value="price_minus_tradein">Tax price − trade-in</option>
                 <option value="price_full">Tax full price</option>
               </select>
             </label>
           </div>
 
-          <h2>Financing</h2>
+          <h3>Financing</h3>
           <div className="two">
-            <NumberInput label="APR %" step={0.1} value={cfg.apr} onChange={(v)=>setCfg({...cfg, apr:v})}/>
+            <NumberField label="APR %" step={0.1} value={cfg.apr} onChange={(v) => setCfg({ ...cfg, apr: v })} />
             <label className="field">
               <span className="label">Term (months)</span>
-              <select value={cfg.termMonths} onChange={(e)=>setCfg({...cfg, termMonths:Number(e.target.value)})}>
-                {[36,48,60,72,84].map(n=> <option key={n} value={n}>{n}</option>)}
+              <select
+                value={cfg.termMonths}
+                onChange={(e) => setCfg({ ...cfg, termMonths: Number(e.target.value) })}
+              >
+                {[36, 48, 60, 72, 84].map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
               </select>
             </label>
           </div>
 
-          <h2>Fees & Extras</h2>
+          <h3>Fees & Extras</h3>
           <div className="two">
-            <NumberInput label="Upfront fees" value={cfg.fees.upfront} onChange={(v)=>setCfg({...cfg, fees:{...cfg.fees, upfront:v}})}/>
-            <NumberInput label="Financed fees" value={cfg.fees.financed} onChange={(v)=>setCfg({...cfg, fees:{...cfg.fees, financed:v}})}/>
+            <NumberField
+              label="Upfront fees"
+              value={cfg.fees.upfront}
+              onChange={(v) => setCfg({ ...cfg, fees: { ...cfg.fees, upfront: v } })}
+            />
+            <NumberField
+              label="Financed fees"
+              value={cfg.fees.financed}
+              onChange={(v) => setCfg({ ...cfg, fees: { ...cfg.fees, financed: v } })}
+            />
           </div>
+
           <div className="two">
-            <NumberInput label="Upfront extras" value={cfg.extras.upfront} onChange={(v)=>setCfg({...cfg, extras:{...cfg.extras, upfront:v}})}/>
-            <NumberInput label="Financed extras" value={cfg.extras.financed} onChange={(v)=>setCfg({...cfg, extras:{...cfg.extras, financed:v}})}/>
+            <NumberField
+              label="Upfront extras"
+              value={cfg.extras.upfront}
+              onChange={(v) => setCfg({ ...cfg, extras: { ...cfg.extras, upfront: v } })}
+            />
+            <NumberField
+              label="Financed extras"
+              value={cfg.extras.financed}
+              onChange={(v) => setCfg({ ...cfg, extras: { ...cfg.extras, financed: v } })}
+            />
           </div>
         </section>
 
-        {/* MIDDLE: Borrower + Decision */}
+        {/* ===== MIDDLE: Borrower + Decision ===== */}
         <section className="panel area-decision">
           <h2>Borrower</h2>
-          <NumberInput label="Monthly income" value={borrower.monthlyIncome} onChange={(v)=>setBorrower({...borrower, monthlyIncome:v})}/>
+          <NumberField
+            label="Monthly income"
+            value={borrower.monthlyIncome}
+            onChange={(v) => setBorrower({ ...borrower, monthlyIncome: v })}
+          />
           <div className="two">
-            <NumberInput label="Housing cost" value={borrower.housingCost} onChange={(v)=>setBorrower({...borrower, housingCost:v})}/>
-            <NumberInput label="Other monthly debt" value={borrower.otherDebt} onChange={(v)=>setBorrower({...borrower, otherDebt:v})}/>
+            <NumberField
+              label="Housing cost"
+              value={borrower.housingCost}
+              onChange={(v) => setBorrower({ ...borrower, housingCost: v })}
+            />
+            <NumberField
+              label="Other monthly debt"
+              value={borrower.otherDebt}
+              onChange={(v) => setBorrower({ ...borrower, otherDebt: v })}
+            />
           </div>
           <label className="field">
             <span className="label">State</span>
-            <input type="text" value={borrower.state ?? ''} onChange={(e)=>setBorrower({...borrower, state:e.target.value})}/>
+            <input
+              type="text"
+              value={borrower.state ?? ''}
+              onChange={(e) => setBorrower({ ...borrower, state: e.target.value })}
+            />
           </label>
 
           <h2>Decision</h2>
@@ -226,92 +273,91 @@ export default function App() {
             <span className={`badge ${evalResult.rules.approved ? 'ok' : 'bad'}`}>
               {evalResult.rules.approved ? 'APPROVED' : 'DECLINED'}
             </span>
-
-            <GaugeBar label="LTV" valuePct={evalResult.features.ltv * 100} limits={{good:100, warn:120}} ariaNote="Target ≤ 100%"/>
-            <GaugeBar label="DTI" valuePct={evalResult.features.dti * 100} limits={{good:40, warn:50}} ariaNote="Target ≤ 50%"/>
-
+            <div className="kv"><span>LTV</span><strong>{pct(evalResult.features.ltv)}</strong></div>
+            <div className="kv"><span>DTI</span><strong>{pct(evalResult.features.dti)}</strong></div>
             <div className="kv">
               <span>PD (risk)</span>
               <strong>{pct(evalResult.risk.pd)} <small>conf {pct(evalResult.risk.confidence)}</small></strong>
             </div>
-
             {evalResult.rules.violations.length > 0 && (
               <ul className="violations">
-                {evalResult.rules.violations.map(v => (
-                  <li key={v.code}><strong>{v.code}:</strong> {v.message}</li>
-                ))}
+                {evalResult.rules.violations.map(v => (<li key={v.code}><strong>{v.code}:</strong> {v.message}</li>))}
               </ul>
             )}
           </div>
         </section>
 
-        {/* RIGHT: Results + Charts + Offers + Amort */}
-        <section className="panel area-results results">
-          <div className="summary">
-            <div className="big">{usd.format(summary.payment)}/mo</div>
-            <div className="row"><span>Financed amount</span><strong>{usd.format(financedAmount)}</strong></div>
-            <div className="row"><span>Sales tax</span><strong>{usd.format(salesTax)}</strong></div>
-            <div className="row"><span>Total interest</span><strong>{usd.format(summary.totalInterest)}</strong></div>
-            <div className="row"><span>All-in cost</span><strong>{usd.format(summary.totalCost)}</strong></div>
-          </div>
+        {/* ===== RIGHT: Results + Charts + Offers + Amortization ===== */}
+        <section className="panel area-results">
+          <div className="results">
+            <h2>{usd.format(summary.payment)}/mo</h2>
+            <div className="summary">
+              <div className="row"><span>Financed amount</span><strong>{usd.format(financedAmount)}</strong></div>
+              <div className="row"><span>Sales tax</span><strong>{usd.format(salesTax)}</strong></div>
+              <div className="row"><span>Total interest (life of loan)</span><strong>{usd.format(summary.totalInterest)}</strong></div>
+              <div className="row"><span>All-in cost</span><strong>{usd.format(summary.totalCost)}</strong></div>
+            </div>
 
-          {/* Charts */}
-          <div className="charts">
-            <div className="chart-card">
-              <div className="chart-title">Interest vs Principal</div>
-              <div className="chart-box">
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2}>
-                      <Cell fill="#66d1ff" />  {/* Principal */}
-                      <Cell fill="#f2c94c" />  {/* Interest */}
-                    </Pie>
-                    <Tooltip formatter={(v:any)=>usd.format(Number(v))} />
-                  </PieChart>
-                </ResponsiveContainer>
+            {/* Charts */}
+            <div className="charts">
+              {/* Donut: interest vs principal */}
+              <div className="chart-card">
+                <div className="chart-title">Interest vs Principal</div>
+                <div className="chart-box">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Principal', value: financedAmount },
+                          { name: 'Interest', value: summary.totalInterest },
+                        ]}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius="60%"
+                        outerRadius="85%"
+                        paddingAngle={2}
+                      >
+                        <Cell fill="#58a6ff" />
+                        <Cell fill="#f2cc60" />
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ background: '#0c1426', border: '1px solid #30363d', color: '#c9d1d9' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Line: remaining balance */}
+              <div className="chart-card">
+                <div className="chart-title">Remaining Balance</div>
+                <div className="chart-box">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={schedule.map(r => ({ month: r.period, balance: r.balance }))}
+                      margin={{ top: 6, right: 12, left: -10, bottom: 0 }}
+                    >
+                      <CartesianGrid stroke="#21262d" strokeDasharray="3 3" />
+                      <XAxis dataKey="month" tick={{ fill: '#8b949e', fontSize: 12 }} />
+                      <YAxis tick={{ fill: '#8b949e', fontSize: 12 }} />
+                      <Tooltip
+                        formatter={(v: any) => usd.format(v as number)}
+                        labelFormatter={(l) => `Month ${l}`}
+                        contentStyle={{ background: '#0c1426', border: '1px solid #30363d', color: '#c9d1d9' }}
+                      />
+                      <Line type="monotone" dataKey="balance" stroke="#58a6ff" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
 
-            <div className="chart-card">
-              <div className="chart-title">Remaining Balance</div>
-              <div className="chart-box">
-                <ResponsiveContainer width="100%" height={220}>
-                  <LineChart data={balanceSeries} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeOpacity={0.15} />
-                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#8ba0bf' }} />
-                    <YAxis tick={{ fontSize: 11, fill: '#8ba0bf' }} tickFormatter={(n)=>`$${(n/1000).toFixed(0)}k`} />
-                    <Tooltip formatter={(v:any)=>usd.format(Number(v))} />
-                    <Line type="monotone" dataKey="balance" stroke="#66d1ff" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-
-          {/* Offers */}
-          <h3>Offers</h3>
-          {evalResult.rules.approved && evalResult.offers.length > 0 ? (
-            <>
-              <div className="offers-toolbar" role="group" aria-label="Sort offers">
-                <label className="field compact">
-                  <span className="label">Sort by</span>
-                  <select value={sortBy} onChange={(e)=>setSortBy(e.target.value as OfferSortKey)}>
-                    <option value="recommended">Recommended</option>
-                    <option value="monthly">Monthly payment</option>
-                    <option value="apr">APR</option>
-                    <option value="riskAdjApr">Risk-Adj APR</option>
-                    <option value="totalCost">Total cost</option>
-                    <option value="term">Term</option>
-                  </select>
-                </label>
-                <button className="ghost sortdir" onClick={()=>setSortDir(d=>d==='asc'?'desc':'asc')}>
-                  {sortDir === 'asc' ? '↑' : '↓'}
-                </button>
-                <span className="muted count">{sortedOffers.length} offers</span>
-              </div>
-
+            <h3>Offers</h3>
+            {offersLoading ? (
+              <p className="muted">Fetching offers…</p>
+            ) : evalResult.rules.approved && offers.length > 0 ? (
               <div className="offers">
-                {sortedOffers.map(o=>(
+                {offers.map(o => (
                   <div className="offer" key={o.lenderId}>
                     <div className="offer-head">
                       <strong>{o.lenderName}</strong>
@@ -326,49 +372,36 @@ export default function App() {
                   </div>
                 ))}
               </div>
-            </>
-          ) : (
-            <p className="muted">
-              {evalResult.rules.approved ? 'No eligible offers found.' : 'No offers because the application is declined.'}
-            </p>
-          )}
-
-          {/* Amortization */}
-          <h3>Amortization</h3>
-          <div className="amort-wrap">
-            <table className="amort" aria-label="Amortization schedule">
-              <thead>
-                <tr>
-                  <th>Month</th><th>Payment</th><th>Interest</th><th>Principal</th><th>Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(showAll ? table : table.slice(0, 24)).map(r=>(
-                  <tr key={r.period}>
-                    <td>{r.period}</td>
-                    <td>{usd.format(r.payment)}</td>
-                    <td>{usd.format(r.interest)}</td>
-                    <td>{usd.format(r.principal)}</td>
-                    <td>{usd.format(r.balance)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="actions">
-            {table.length > 24 && (
-              <button className="ghost" onClick={()=>setShowAll(s=>!s)}>
-                {showAll ? 'Show first 24 months' : `Show all ${table.length} months`}
-              </button>
+            ) : (
+              <p className="muted">
+                {evalResult.rules.approved ? 'No eligible offers found.' : 'No offers because the application is declined.'}
+              </p>
             )}
-            <button className="ghost" onClick={exportAmortCsv}>Export CSV</button>
+
+            <h3>Amortization</h3>
+            <div className="amort-wrap">
+              <table className="amort">
+                <thead>
+                  <tr>
+                    <th>Month</th><th>Payment</th><th>Interest</th><th>Principal</th><th>Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {schedule.slice(0, 60).map(r => (
+                    <tr key={r.period}>
+                      <td>{r.period}</td>
+                      <td>{usd.format(r.payment)}</td>
+                      <td>{usd.format(r.interest)}</td>
+                      <td>{usd.format(r.principal)}</td>
+                      <td>{usd.format(r.balance)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
-      </main>
-
-      <footer>
-        <small>Edge cases: 0% APR, rounding, negative equity protection.</small>
-      </footer>
+      </div>
     </div>
   );
 }
