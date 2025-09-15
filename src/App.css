@@ -109,8 +109,6 @@
 .kpi .value { font-weight: 800; color: var(--text); white-space: nowrap; font-size: clamp(22px, 2.2vw, 28px); }
 .kpi .unit  { font-size: 14px; font-weight: 600; color: var(--muted); margin-left: 4px; }
 
-/* (Intentionally no other .hero-kpis overrides below) */
-
 /* =========================
    DECISION (middle column)
    ========================= */
@@ -220,3 +218,88 @@ button.ghost:hover { border-color: var(--accent); }
 
 /* Extras */
 * { scrollbar-color: var(--border) transparent; scrollbar-width: thin; }
+
+/* =========================================================
+   VIN ROW (under "Vehicle & Pricing")
+   ========================================================= */
+.inputs .vin-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+.inputs .vin-row .field {
+  flex: 1;
+  margin: 0;
+}
+.inputs .vin-btn {
+  min-height: 40px;
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+.inputs .vin-info { 
+  color: var(--muted);
+  font-size: 12px;
+  margin: -2px 0 8px;
+}
+.inputs .vin-error {
+  color: var(--danger, #f85149);
+  font-size: 12px;
+  margin: -2px 0 8px;
+}
+
+/* =========================================================
+   HIDE THE STRAY HERO DECODE BUTTON
+   ========================================================= */
+.hero .kpi button.ghost {
+  display: none !important;
+}
+
+/* === VIN row polish (under Vehicle & Pricing) ======================= */
+.inputs .vin-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;     /* align button baseline with input */
+  margin-bottom: 12px;       /* same rhythm as other fields */
+}
+.inputs .vin-row .field {
+  flex: 1;
+  margin: 0;                 /* avoid double spacing inside row */
+}
+
+/* Match input height & add GitHub-blue outline on hover/focus */
+.inputs .vin-btn {
+  min-height: 40px;
+  padding: 8px 14px;
+  white-space: nowrap;
+  transition: border-color .15s, color .15s, background-color .15s;
+}
+
+/* Optional: make the VIN button pop a bit (GitHub-ish blue) */
+.ghost.primary {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ghost.primary:hover {
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  border-color: color-mix(in oklab, var(--accent) 85%, var(--border));
+}
+
+/* VIN helper lines */
+.inputs .vin-info {
+  color: var(--muted);
+  font-size: 12px;
+  margin: -2px 0 8px;
+}
+.inputs .vin-error {
+  color: var(--danger, #f85149);
+  font-size: 12px;
+  margin: -2px 0 8px;
+}
+
+/* Safety net: hide any hero/KPI 'Decode VIN' button if present */
+.hero .kpi button.ghost,
+.hero .decode-vin-hero {
+  display: none !important;
+}
+

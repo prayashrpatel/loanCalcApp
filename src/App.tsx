@@ -8,6 +8,10 @@ import { getTaxPreset } from './lib/tax';
 import { fetchOffers } from './lib/lendersGateway';
 import { decodeVin, type VinInfo } from './lib/vehicle';
 
+// NEW: features + risk (backend)
+import { computeFeatures } from './lib/affordability';
+import { scoreRisk, type RiskScore } from './lib/risk';
+
 // charts
 import {
   ResponsiveContainer,
@@ -23,13 +27,13 @@ const DEFAULT_CFG: LoanConfig = {
   price: 32000,
   down: 2000,
   tradeIn: 0,
-  tradeInPayoff: 0,             // << matches your file names
-  apr: 6.5,                     // APR stored as percent in your UI
+  tradeInPayoff: 0,
+  apr: 6.5,
   termMonths: 60,
-  taxRate: 8.75,                // percent
+  taxRate: 8.75,
   fees: { upfront: 400, financed: 300 },
   extras: { upfront: 0, financed: 0 },
-  taxRule: 'price_minus_tradein', // 'price_minus_tradein' | 'price_full'
+  taxRule: 'price_minus_tradein',
 };
 
 const DEFAULT_BORROWER: BorrowerProfile = {
@@ -71,14 +75,55 @@ export default function App() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [offersLoading, setOffersLoading] = useState(false);
 
-  // Loan math (using functions that exist in lib/loan.ts)
+  // Decision pipeline async state (rules/approval/offers)
+  const [evalResult, setEvalResult] = useState<EvaluationResult | null>(null);
+  const [evalLoading, setEvalLoading] = useState(false);
+  const [evalError, setEvalError] = useState<string | null>(null);
+
+  // === Loan math (local/instant) ===
   const salesTax = useMemo(() => computeSalesTax(cfg), [cfg]);
   const financedAmount = useMemo(() => computeFinancedAmount(cfg, salesTax), [cfg, salesTax]);
   const summary = useMemo(() => computeSummary(cfg), [cfg]);
   const schedule = useMemo(() => buildAmortization(cfg), [cfg]);
 
-  // Decision pipeline (function exists in lib/pipeline.ts)
-  const evalResult: EvaluationResult = useMemo(() => evaluateApplication(cfg, borrower), [cfg, borrower]);
+  // === NEW: compute features locally ===
+  const features = useMemo(() => computeFeatures(cfg, borrower), [cfg, borrower]);
+
+  // === NEW: backend risk (PD/conf) ===
+  const [risk, setRisk] = useState<RiskScore>({ pd: 0.3, confidence: 0.6 });
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await scoreRisk(cfg, borrower, { ltv: features.ltv, dti: features.dti });
+        if (alive) setRisk(r);
+      } catch {
+        // keep prior risk if call fails
+      }
+    })();
+    // re-score only when the meaningful inputs change
+  }, [cfg.apr, cfg.termMonths, borrower.monthlyIncome, features.ltv, features.dti]); // eslint-disable-line
+
+  // Run server-side decision pipeline (rules/approval etc.)
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setEvalLoading(true);
+      setEvalError(null);
+      try {
+        const res = await evaluateApplication(cfg, borrower);
+        if (alive) setEvalResult(res);
+      } catch (e: any) {
+        if (alive) {
+          setEvalResult(null);
+          setEvalError(e?.message ?? 'Failed to evaluate application');
+        }
+      } finally {
+        if (alive) setEvalLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [cfg, borrower]);
 
   // Optional: auto-set tax preset from state
   useEffect(() => {
@@ -90,7 +135,7 @@ export default function App() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      if (!evalResult.rules.approved) { setOffers([]); return; }
+      if (!evalResult?.rules.approved) { setOffers([]); return; }
       setOffersLoading(true);
       try {
         const o = await fetchOffers(cfg, borrower);
@@ -100,7 +145,7 @@ export default function App() {
       }
     })();
     return () => { alive = false; };
-  }, [cfg, borrower, evalResult.rules.approved]);
+  }, [cfg, borrower, evalResult?.rules.approved]);
 
   // VIN handler
   async function onDecodeVin() {
@@ -117,6 +162,8 @@ export default function App() {
       setVinLoading(false);
     }
   }
+
+  const approved = evalResult?.rules.approved ?? false;
 
   return (
     <div className="container">
@@ -270,20 +317,30 @@ export default function App() {
 
           <h2>Decision</h2>
           <div className="decision">
-            <span className={`badge ${evalResult.rules.approved ? 'ok' : 'bad'}`}>
-              {evalResult.rules.approved ? 'APPROVED' : 'DECLINED'}
-            </span>
-            <div className="kv"><span>LTV</span><strong>{pct(evalResult.features.ltv)}</strong></div>
-            <div className="kv"><span>DTI</span><strong>{pct(evalResult.features.dti)}</strong></div>
+            {evalLoading && <span className="badge">Calculating…</span>}
+            {!evalLoading && (
+              <span className={`badge ${approved ? 'ok' : 'bad'}`}>
+                {approved ? 'APPROVED' : 'DECLINED'}
+              </span>
+            )}
+            <div className="kv"><span>LTV</span><strong>{pct(features.ltv)}</strong></div>
+            <div className="kv"><span>DTI</span><strong>{pct(features.dti)}</strong></div>
             <div className="kv">
               <span>PD (risk)</span>
-              <strong>{pct(evalResult.risk.pd)} <small>conf {pct(evalResult.risk.confidence)}</small></strong>
+              <strong>
+                {pct(risk.pd)} <small>conf {pct(risk.confidence)}</small>
+              </strong>
             </div>
-            {evalResult.rules.violations.length > 0 && (
-              <ul className="violations">
-                {evalResult.rules.violations.map(v => (<li key={v.code}><strong>{v.code}:</strong> {v.message}</li>))}
-              </ul>
-            )}
+            {evalError && <p className="vin-error">{evalError}</p>}
+            {evalResult?.rules.violations.length
+              ? (
+                <ul className="violations">
+                  {evalResult.rules.violations.map(v => (
+                    <li key={v.code}><strong>{v.code}:</strong> {v.message}</li>
+                  ))}
+                </ul>
+              )
+              : null}
           </div>
         </section>
 
@@ -355,7 +412,7 @@ export default function App() {
             <h3>Offers</h3>
             {offersLoading ? (
               <p className="muted">Fetching offers…</p>
-            ) : evalResult.rules.approved && offers.length > 0 ? (
+            ) : approved && offers.length > 0 ? (
               <div className="offers">
                 {offers.map(o => (
                   <div className="offer" key={o.lenderId}>
@@ -374,7 +431,7 @@ export default function App() {
               </div>
             ) : (
               <p className="muted">
-                {evalResult.rules.approved ? 'No eligible offers found.' : 'No offers because the application is declined.'}
+                {approved ? 'No eligible offers found.' : 'No offers because the application is declined.'}
               </p>
             )}
 

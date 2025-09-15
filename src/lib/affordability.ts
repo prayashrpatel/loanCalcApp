@@ -14,10 +14,20 @@ export function computeFeatures(cfg: LoanConfig, borrower: BorrowerProfile): Fea
   const denom = Math.max(borrower.monthlyIncome, 1);
   const dti = monthlyDebtLoad / denom;
 
-  return { ltv, dti, payment, financedAmount };
+  return {
+    ltv,
+    dti,
+    payment,
+    financedAmount,
+
+    // Provide additional fields for the AI risk model
+    apr: cfg.apr,                        // keep units consistent with your model (e.g., 6.5 = 6.5%)
+    termMonths: cfg.termMonths,
+    monthlyIncome: borrower.monthlyIncome,
+  };
 }
 
-// convenience if you want “can afford” flag in UI
+// Convenience if you want a simple “can afford” flag in UI
 export function isAffordable(features: Features, thresholds = { maxDTI: 0.45 }) {
   return features.dti <= thresholds.maxDTI;
 }

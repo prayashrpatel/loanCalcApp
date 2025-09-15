@@ -22,11 +22,17 @@ export interface BorrowerProfile {
   state?: string;
 }
 
+// ✅ Single source of truth for Features
 export interface Features {
   ltv: number;              // loan-to-value
   dti: number;              // debt-to-income incl. new loan payment
   payment: number;          // computed monthly payment for cfg
   financedAmount: number;   // principal financed
+
+  // Added for risk model inputs (does not affect UI)
+  apr: number;              // APR as entered in LoanConfig (keep consistent with model expectation)
+  termMonths: number;       // loan term in months
+  monthlyIncome: number;    // from BorrowerProfile
 }
 
 export interface RiskScore {
