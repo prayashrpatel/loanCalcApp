@@ -8,10 +8,6 @@ import { getTaxPreset } from './lib/tax';
 import { fetchOffers } from './lib/lendersGateway';
 import { decodeVin, type VinInfo } from './lib/vehicle';
 
-// NEW: features + risk (backend)
-import { computeFeatures } from './lib/affordability';
-import { scoreRisk, type RiskScore } from './lib/risk';
-
 // charts
 import {
   ResponsiveContainer,
@@ -85,24 +81,6 @@ export default function App() {
   const financedAmount = useMemo(() => computeFinancedAmount(cfg, salesTax), [cfg, salesTax]);
   const summary = useMemo(() => computeSummary(cfg), [cfg]);
   const schedule = useMemo(() => buildAmortization(cfg), [cfg]);
-
-  // === NEW: compute features locally ===
-  const features = useMemo(() => computeFeatures(cfg, borrower), [cfg, borrower]);
-
-  // === NEW: backend risk (PD/conf) ===
-  const [risk, setRisk] = useState<RiskScore>({ pd: 0.3, confidence: 0.6 });
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const r = await scoreRisk(cfg, borrower, { ltv: features.ltv, dti: features.dti });
-        if (alive) setRisk(r);
-      } catch {
-        // keep prior risk if call fails
-      }
-    })();
-    // re-score only when the meaningful inputs change
-  }, [cfg.apr, cfg.termMonths, borrower.monthlyIncome, features.ltv, features.dti]); // eslint-disable-line
 
   // Run server-side decision pipeline (rules/approval etc.)
   useEffect(() => {
@@ -323,24 +301,24 @@ export default function App() {
                 {approved ? 'APPROVED' : 'DECLINED'}
               </span>
             )}
-            <div className="kv"><span>LTV</span><strong>{pct(features.ltv)}</strong></div>
-            <div className="kv"><span>DTI</span><strong>{pct(features.dti)}</strong></div>
+
+            <div className="kv"><span>LTV</span><strong>{pct(evalResult?.features.ltv ?? 0)}</strong></div>
+            <div className="kv"><span>DTI</span><strong>{pct(evalResult?.features.dti ?? 0)}</strong></div>
             <div className="kv">
               <span>PD (risk)</span>
               <strong>
-                {pct(risk.pd)} <small>conf {pct(risk.confidence)}</small>
+                {pct(evalResult?.risk.pd ?? 0)} <small>conf {pct(evalResult?.risk.confidence ?? 0)}</small>
               </strong>
             </div>
+
             {evalError && <p className="vin-error">{evalError}</p>}
-            {evalResult?.rules.violations.length
-              ? (
-                <ul className="violations">
-                  {evalResult.rules.violations.map(v => (
-                    <li key={v.code}><strong>{v.code}:</strong> {v.message}</li>
-                  ))}
-                </ul>
-              )
-              : null}
+            {evalResult?.rules.violations.length ? (
+              <ul className="violations">
+                {evalResult.rules.violations.map((v) => (
+                  <li key={v.code}><strong>{v.code}:</strong> {v.message}</li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         </section>
 
@@ -357,7 +335,6 @@ export default function App() {
 
             {/* Charts */}
             <div className="charts">
-              {/* Donut: interest vs principal */}
               <div className="chart-card">
                 <div className="chart-title">Interest vs Principal</div>
                 <div className="chart-box">
@@ -377,15 +354,12 @@ export default function App() {
                         <Cell fill="#58a6ff" />
                         <Cell fill="#f2cc60" />
                       </Pie>
-                      <Tooltip
-                        contentStyle={{ background: '#0c1426', border: '1px solid #30363d', color: '#c9d1d9' }}
-                      />
+                      <Tooltip contentStyle={{ background: '#0c1426', border: '1px solid #30363d', color: '#c9d1d9' }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              {/* Line: remaining balance */}
               <div className="chart-card">
                 <div className="chart-title">Remaining Balance</div>
                 <div className="chart-box">

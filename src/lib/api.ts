@@ -1,11 +1,19 @@
-const BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+export type Http = <T>(input: string, init?: RequestInit) => Promise<T>;
 
-export async function http<T>(path: string, init?: RequestInit): Promise<T> {
+const BASE = (import.meta as any).env?.VITE_API_URL || '';
+
+export const http: Http = async (path, init) => {
   const url = path.startsWith('http') ? path : `${BASE}${path}`;
   const res = await fetch(url, {
     ...init,
-    headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init?.headers || {}),
+    },
   });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json() as Promise<T>;
-}
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`${res.status} ${res.statusText} — ${text}`);
+  }
+  return res.json();
+};
