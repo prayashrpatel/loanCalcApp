@@ -12,6 +12,7 @@ export async function evaluateApplication(
 ): Promise<EvaluationResult> {
   const features = computeFeatures(cfg, borrower);
 
+  // ⬇️ pass all three: cfg, borrower, features
   const risk: RiskScore = await scoreRisk(cfg, borrower, features);
 
   const rules = applyRules(features, borrower, risk, DEFAULT_RULES);

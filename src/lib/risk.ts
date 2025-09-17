@@ -1,25 +1,31 @@
 // src/lib/risk.ts
 import { http } from './api';
-import type { BorrowerProfile, LoanConfig, RiskScore, Features } from './models';
+import type { Features, BorrowerProfile, LoanConfig, RiskScore } from './models';
 
 export async function scoreRisk(
   cfg: LoanConfig,
   borrower: BorrowerProfile,
-  features: Pick<Features, 'ltv' | 'dti'>
+  features: Features
 ): Promise<RiskScore> {
+  // UI stores APR as percent (e.g., 6.5). Convert to decimal (0.065) for the API.
+  const aprDecimal = cfg.apr >= 1 ? cfg.apr / 100 : cfg.apr;
+
   const payload = {
     ltv: features.ltv,
     dti: features.dti,
-    apr: cfg.apr / 100,           // send decimal to API (e.g. 0.065)
+    apr: aprDecimal,
     termMonths: cfg.termMonths,
     income: borrower.monthlyIncome,
   };
 
-  const res = await http<RiskScore>('/api/score', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+  const res = await http<{ pd: number; confidence: number; modelVersion?: string }>(
+    '/api/score',
+    { method: 'POST', body: JSON.stringify(payload) }
+  );
 
-  // ensure modelVersion present
-  return { ...res, modelVersion: res.modelVersion ?? 'dummy-v1' };
+  return {
+    pd: res.pd,
+    confidence: res.confidence,
+    modelVersion: res.modelVersion ?? 'dummy-v1',
+  };
 }
