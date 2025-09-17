@@ -7,7 +7,6 @@ export async function scoreRisk(
   borrower: BorrowerProfile,
   features: Features
 ): Promise<RiskScore> {
-  // UI stores APR as percent (e.g., 6.5). Convert to decimal (0.065) for the API.
   const aprDecimal = cfg.apr >= 1 ? cfg.apr / 100 : cfg.apr;
 
   const payload = {
