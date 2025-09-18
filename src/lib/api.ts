@@ -1,18 +1,18 @@
 // src/lib/api.ts
 
-export const API_BASE =
-  import.meta.env.VITE_API_BASE ?? 'http://localhost:3000';
+// strip any trailing slashes from the base
+export const API_BASE = (import.meta.env.VITE_API_BASE ?? 'http://localhost:3000').replace(/\/+$/, '');
 
-/** Generic JSON fetcher */
+// Generic JSON fetcher
 export async function http<T = unknown>(path: string, init?: RequestInit): Promise<T> {
-  const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+  // ensure exactly one slash between base and path
+  const url = path.startsWith('http')
+    ? path
+    : `${API_BASE}${path.startsWith('/') ? '' : '/'}${path}`;
 
   const res = await fetch(url, {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers || {}),
-    },
+    headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
   });
 
   const text = await res.text();
@@ -28,11 +28,10 @@ export async function http<T = unknown>(path: string, init?: RequestInit): Promi
   return data as T;
 }
 
-/** Convenience wrapper for /api/score */
 export function postScore(body: {
   ltv: number;
   dti: number;
-  apr: number;           // decimal (e.g., 0.065)
+  apr: number;        // decimal (0.065)
   termMonths: number;
   income: number;
 }) {

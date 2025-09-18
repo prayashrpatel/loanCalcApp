@@ -1,13 +1,12 @@
 import type { BorrowerProfile, Features, LoanConfig } from './models';
 import { computeSalesTax, computeFinancedAmount, computePayment } from './loan';
 
-// Compute LTV, DTI, etc. Uses your existing loan math.
 export function computeFeatures(cfg: LoanConfig, borrower: BorrowerProfile): Features {
   const tax = computeSalesTax(cfg);
   const financedAmount = computeFinancedAmount(cfg, tax);
   const payment = computePayment(cfg, financedAmount);
 
-  const vehiclePrice = Math.max(cfg.price, 1); // avoid /0
+  const vehiclePrice = Math.max(cfg.price, 1);
   const ltv = financedAmount / vehiclePrice;
 
   const monthlyDebtLoad = borrower.otherDebt + borrower.housingCost + payment;
@@ -19,15 +18,12 @@ export function computeFeatures(cfg: LoanConfig, borrower: BorrowerProfile): Fea
     dti,
     payment,
     financedAmount,
-
-    // Provide additional fields for the AI risk model
-    apr: cfg.apr,                        // keep units consistent with your model (e.g., 6.5 = 6.5%)
+    apr: cfg.apr,
     termMonths: cfg.termMonths,
     monthlyIncome: borrower.monthlyIncome,
   };
 }
 
-// Convenience if you want a simple “can afford” flag in UI
 export function isAffordable(features: Features, thresholds = { maxDTI: 0.45 }) {
   return features.dti <= thresholds.maxDTI;
 }
