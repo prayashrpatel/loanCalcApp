@@ -5,7 +5,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': 'http://localhost:3002', // <- use the port vercel printed
+      '/api': {
+        target: 'http://127.0.0.1:3000', // your API dev server
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
   base: '/loanCalcApp/',
