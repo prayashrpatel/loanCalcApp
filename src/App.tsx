@@ -1,3 +1,4 @@
+// src/App.tsx
 import { useEffect, useMemo, useState } from 'react';
 import './App.css';
 
@@ -57,6 +58,15 @@ function NumberField({
   );
 }
 
+// Amortization row shape (matches buildAmortization output)
+type AmortRow = {
+  period: number;
+  payment: number;
+  interest: number;
+  principal: number;
+  balance: number;
+};
+
 export default function App() {
   const [cfg, setCfg] = useState<LoanConfig>(DEFAULT_CFG);
   const [borrower, setBorrower] = useState<BorrowerProfile>(DEFAULT_BORROWER);
@@ -80,7 +90,7 @@ export default function App() {
   const salesTax = useMemo(() => computeSalesTax(cfg), [cfg]);
   const financedAmount = useMemo(() => computeFinancedAmount(cfg, salesTax), [cfg, salesTax]);
   const summary = useMemo(() => computeSummary(cfg), [cfg]);
-  const schedule = useMemo(() => buildAmortization(cfg), [cfg]);
+  const schedule: AmortRow[] = useMemo(() => buildAmortization(cfg), [cfg]);
 
   // Run server-side decision pipeline (rules/approval etc.)
   useEffect(() => {
@@ -145,12 +155,12 @@ export default function App() {
 
   return (
     <div className="container">
-      <div className="layout">
-        {/* ===== HERO KPI STRIP ===== */}
+      <div className="grid-shell">
+        {/* ===== KPI STRIP ===== */}
         <section className="hero area-hero">
           <h1 className="hero-title">Auto Loan Calculator</h1>
           <div className="hero-kpis">
-            <div className="kpi kpi-main">
+            <div className="kpi">
               <div className="label">Monthly payment</div>
               <div className="value">
                 {usd.format(summary.payment)} <span className="unit">/mo</span>
@@ -171,25 +181,21 @@ export default function App() {
           </div>
         </section>
 
-        {/* ===== LEFT: Vehicle & Pricing ===== */}
-        <section className="panel area-inputs">
-          <h2>Vehicle & Pricing</h2>
-
-          {/* VIN row */}
-          <div className="vin-row">
-            <label className="field">
-              <span className="label">VIN</span>
-              <input
-                type="text"
-                value={vin}
-                onChange={(e) => setVin(e.target.value.toUpperCase())}
-                placeholder="Enter VIN (e.g., 1HGCM82633A004352)"
-              />
-            </label>
-            <button className="ghost primary vin-btn" onClick={onDecodeVin} disabled={vinLoading || !vin}>
-              {vinLoading ? 'Decoding…' : 'Decode VIN'}
-            </button>
-          </div>
+        {/* ===== COL 1: VIN DECODER ===== */}
+        <section className="panel area-vin">
+          <h2>Vin Decoder</h2>
+          <label className="field">
+            <span className="label">VIN</span>
+            <input
+              type="text"
+              value={vin}
+              onChange={(e) => setVin(e.target.value.toUpperCase())}
+              placeholder="Enter VIN (e.g., 1HGCM82633A004352)"
+            />
+          </label>
+          <button className="ghost primary vin-btn" onClick={onDecodeVin} disabled={vinLoading || !vin}>
+            {vinLoading ? 'Decoding…' : 'DECODE VIN'}
+          </button>
           {vinInfo && (
             <p className="vin-info">
               {vinInfo.year} {vinInfo.make} {vinInfo.model} {vinInfo.trim}
@@ -197,6 +203,11 @@ export default function App() {
             </p>
           )}
           {vinError && <p className="vin-error">{vinError}</p>}
+        </section>
+
+        {/* ===== COL 2: VEHICLE & PRICING ===== */}
+        <section className="panel area-vehicle">
+          <h2>Vehicle & Pricing</h2>
 
           <NumberField label="Vehicle price" value={cfg.price} onChange={(v) => setCfg({ ...cfg, price: v })} />
           <NumberField label="Down payment" value={cfg.down} onChange={(v) => setCfg({ ...cfg, down: v })} />
@@ -229,9 +240,7 @@ export default function App() {
                 value={cfg.termMonths}
                 onChange={(e) => setCfg({ ...cfg, termMonths: Number(e.target.value) })}
               >
-                {[36, 48, 60, 72, 84].map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
+                {[36, 48, 60, 72, 84].map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
             </label>
           </div>
@@ -264,8 +273,8 @@ export default function App() {
           </div>
         </section>
 
-        {/* ===== MIDDLE: Borrower + Decision ===== */}
-        <section className="panel area-decision">
+        {/* ===== COL 3: BORROWER + DECISION ===== */}
+        <section className="panel area-borrower">
           <h2>Borrower</h2>
           <NumberField
             label="Monthly income"
@@ -306,9 +315,7 @@ export default function App() {
             <div className="kv"><span>DTI</span><strong>{pct(evalResult?.features.dti ?? 0)}</strong></div>
             <div className="kv">
               <span>PD (risk)</span>
-              <strong>
-                {pct(evalResult?.risk.pd ?? 0)} <small>conf {pct(evalResult?.risk.confidence ?? 0)}</small>
-              </strong>
+              <strong>{pct(evalResult?.risk.pd ?? 0)} <small>conf {pct(evalResult?.risk.confidence ?? 0)}</small></strong>
             </div>
 
             {evalError && <p className="vin-error">{evalError}</p>}
@@ -322,7 +329,7 @@ export default function App() {
           </div>
         </section>
 
-        {/* ===== RIGHT: Results + Charts + Offers + Amortization ===== */}
+        {/* ===== COL 4: RESULTS + CHARTS + AMORTIZATION ===== */}
         <section className="panel area-results">
           <div className="results">
             <h2>{usd.format(summary.payment)}/mo</h2>
@@ -333,7 +340,6 @@ export default function App() {
               <div className="row"><span>All-in cost</span><strong>{usd.format(summary.totalCost)}</strong></div>
             </div>
 
-            {/* Charts */}
             <div className="charts">
               <div className="chart-card">
                 <div className="chart-title">Interest vs Principal</div>
@@ -365,7 +371,7 @@ export default function App() {
                 <div className="chart-box">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart
-                      data={schedule.map(r => ({ month: r.period, balance: r.balance }))}
+                      data={schedule.map((r: AmortRow) => ({ month: r.period, balance: r.balance }))}
                       margin={{ top: 6, right: 12, left: -10, bottom: 0 }}
                     >
                       <CartesianGrid stroke="#21262d" strokeDasharray="3 3" />
@@ -383,32 +389,6 @@ export default function App() {
               </div>
             </div>
 
-            <h3>Offers</h3>
-            {offersLoading ? (
-              <p className="muted">Fetching offers…</p>
-            ) : approved && offers.length > 0 ? (
-              <div className="offers">
-                {offers.map(o => (
-                  <div className="offer" key={o.lenderId}>
-                    <div className="offer-head">
-                      <strong>{o.lenderName}</strong>
-                      <span className="muted">{o.termMonths} mo</span>
-                    </div>
-                    <div className="offer-grid">
-                      <div><div className="muted">APR</div><div>{o.apr.toFixed(2)}%</div></div>
-                      <div><div className="muted">Risk-Adj APR</div><div>{o.riskAdjustedApr.toFixed(2)}%</div></div>
-                      <div><div className="muted">Monthly</div><div>{usd.format(o.monthlyPayment)}</div></div>
-                      <div><div className="muted">Total Cost</div><div>{usd.format(o.totalCost)}</div></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="muted">
-                {approved ? 'No eligible offers found.' : 'No offers because the application is declined.'}
-              </p>
-            )}
-
             <h3>Amortization</h3>
             <div className="amort-wrap">
               <table className="amort">
@@ -418,7 +398,7 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {schedule.slice(0, 60).map(r => (
+                  {schedule.slice(0, 60).map((r: AmortRow) => (
                     <tr key={r.period}>
                       <td>{r.period}</td>
                       <td>{usd.format(r.payment)}</td>

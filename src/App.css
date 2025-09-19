@@ -1,305 +1,119 @@
-/* =========================
-   LANDSCAPE LAYOUT (grid areas)
-   ========================= */
-.container { max-width: 1440px; margin: 0 auto; padding: 18px 20px; }
+/* ========= Shared layout variables ========= */
+:root {
+  --gap: 24px;
+  /* Columns: VIN | Vehicle | Borrower | Results (tweak to taste) */
+  --col-1: 1fr;
+  --col-2: 1fr;
+  --col-3: 1fr;
+  --col-4: 1.2fr;
+}
 
-.layout {
+/* --- Shell grid --- */
+.grid-shell {
   display: grid;
-  grid-template-areas:
-    "hero hero hero"
-    "inputs decision results";
-  grid-template-columns: 1.15fr 0.9fr 1.25fr;
+  grid-template-columns: var(--col-1) var(--col-2) var(--col-3) var(--col-4);
+  grid-auto-rows: min-content;
   gap: var(--gap);
+  align-items: start;
 }
 
-@media (max-width: 1100px) {
-  .layout {
-    grid-template-areas:
-      "hero"
-      "inputs"
-      "decision"
-      "results";
-    grid-template-columns: 1fr;
-  }
+.area-hero {
+  grid-column: 1 / -1; /* KPI strip spans all 4 columns */
 }
 
-.area-hero     { grid-area: hero; }
-.area-inputs   { grid-area: inputs; }
-.area-decision { grid-area: decision; }
-.area-results  { grid-area: results; }
-
-/* =========================
-   CARDS + FIELDS
-   ========================= */
-.panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-  box-shadow: var(--shadow);
-}
-
-.panel h2, .panel h3 {
-  font-size: 16px;
-  font-weight: 700;
-  margin: 6px 0 12px;
-  letter-spacing: .2px;
-}
-
-.field { display: grid; gap: 6px; margin-bottom: 12px; }
-.field .label { color: var(--muted); font-size: 12px; letter-spacing: .2px; }
-.field input, .field select {
-  background: #0c1426;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 12px;
-  outline: none;
-  min-height: 40px;
-}
-.field input:focus, .field select:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 25%, transparent);
-}
-.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-@media (max-width: 640px){ .two { grid-template-columns: 1fr; } }
-
-/* =========================
-   HERO (top bar) – equal tiles
-   ========================= */
-.hero {
-  background: linear-gradient(180deg, #0f1933 0%, #0f1629 100%);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px 20px 14px;
-  box-shadow: var(--shadow);
-}
-
-.hero-title {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: .2px;
-  color: var(--text);
-  margin-bottom: 10px;
-}
-
-/* Four equal tiles that wrap to 2×2/1×4 as space tightens */
+/* --- KPI cards --- */
 .hero-kpis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 12px;
+  /* Make KPIs match the panel grid exactly */
+  grid-template-columns: var(--col-1) var(--col-2) var(--col-3) var(--col-4);
+  gap: 16px; /* fine to keep smaller gap inside the hero */
 }
 
-/* Tile */
 .kpi {
   background: #0c1426;
-  border: 1px solid var(--border);
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  padding: 16px 18px;
+  min-height: 86px; /* small visual consistency */
+}
+.kpi .label { color:#8b949e; font-size:12px; margin-bottom:6px; }
+.kpi .value { font-size:22px; font-weight:700; }
+
+/* --- Panels --- */
+.panel {
+  background: #0b1324;
+  border: 1px solid #30363d;
   border-radius: 14px;
-  padding: 14px 16px;
-  display: grid;
-  align-content: center;
-  min-height: 70px;
+  padding: 18px;
 }
 
-/* Keep a subtle highlight on the first tile without affecting size */
-.kpi-main { outline: 1px solid color-mix(in oklab, var(--accent) 35%, transparent); }
+/* Place panels into columns */
+.area-vin      { grid-column: 1; }
+.area-vehicle  { grid-column: 2; }
+.area-borrower { grid-column: 3; }
+.area-results  { grid-column: 4; }
 
-/* Text */
-.kpi .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-.kpi .value { font-weight: 800; color: var(--text); white-space: nowrap; font-size: clamp(22px, 2.2vw, 28px); }
-.kpi .unit  { font-size: 14px; font-weight: 600; color: var(--muted); margin-left: 4px; }
+/* Keep left/middle cards visually balanced in height */
+.area-vin, .area-vehicle, .area-borrower { min-height: 740px; }
 
-/* =========================
-   DECISION (middle column)
-   ========================= */
-.decision {
-  display: grid;
-  gap: 8px;
-  background: #0c1426;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 12px;
+/* --- Forms & fields --- */
+.field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+.field .label { color:#8b949e; font-size:12px; }
+.field input, .field select {
+  background:#0c1426; border:1px solid #30363d; color:#c9d1d9;
+  border-radius:10px; padding:10px 12px; outline:none;
 }
-.badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-weight: 800;
-  letter-spacing: .3px;
-  width: fit-content;
-  border: 1px solid var(--border);
-}
-.badge.ok  { background:#163a23; color:#8ef1b1; border-color:#214d31; }
-.badge.bad { background:#3a1616; color:#f1a2a2; border-color:#4d2121; }
-.kv { display:flex; align-items:center; gap: 12px; }
-.kv span { color: var(--muted); }
-.kv strong { min-width: 80px; text-align: right; }
+.two { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
 
-/* Gauges */
-.gauge {
-  height: 8px; flex: 1; margin-left: 8px;
-  background: #101b33;
-  border: 1px solid #1e2a44;
-  border-radius: 999px; overflow: hidden;
-}
-.gauge > i { display: block; height: 100%; background: var(--accent); }
-.gauge-good > i { background: var(--success); }
-.gauge-warn > i { background: var(--warn); }
-.gauge-bad  > i { background: var(--danger); }
+/* VIN button */
+.vin-btn { margin-top:10px; width:100%; }
 
-/* =========================
-   RESULTS (right column)
-   ========================= */
-.results .summary {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.results .summary .big {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--accent);
-}
+/* Decision badges */
+.badge { display:inline-block; padding:6px 10px; border-radius:999px; font-size:12px; }
+.badge.ok  { background:#173d2a; color:#6ee7a7; border:1px solid #256b45; }
+.badge.bad { background:#3d1a1a; color:#fda4a4; border:1px solid #6b2525; }
+
+.kv { display:flex; justify-content:space-between; margin:6px 0; }
+.kv span { color:#8b949e; }
+
+/* Results column */
 .results .summary .row {
-  display: flex; justify-content: space-between; padding: 6px 0;
-  border-bottom: 1px dashed var(--border);
+  display:flex; justify-content:space-between;
+  padding:6px 0; border-bottom:1px dashed #263041;
 }
-.results .summary .row span { color: var(--muted); }
-
-/* Charts */
-.charts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 12px; margin: 10px 0 12px;
+.results .charts {
+  display:grid; grid-template-columns: 1fr; gap:14px; margin-top:10px; margin-bottom:14px;
 }
-.chart-card {
-  background: #0c1426;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 12px; min-width: 0;
-}
-.chart-title { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-.chart-box { height: 220px; }
-@media (max-width: 480px) { .chart-box { height: 180px; } }
-
-/* Offers */
-.offers-toolbar { display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap: wrap; }
-.field.compact { margin:0; }
-.field.compact .label { font-size: 11px; }
-.field.compact select { padding: 8px 10px; border-radius: 10px; min-height: 36px; }
-
-.offers { display:grid; gap:10px; }
-.offer  { background:#0c1426; border:1px solid var(--border); border-radius:12px; padding:10px; }
-.offer-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
-.offer-grid { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:8px; }
-.muted { color: var(--muted); font-size: 12px; }
-@media (max-width: 860px) { .offer-grid { grid-template-columns: repeat(2, 1fr); } }
+.chart-card { background:#0c1426; border:1px solid #30363d; border-radius:12px; padding:10px; }
+.chart-title { color:#8b949e; font-size:12px; margin-bottom:6px; }
+.chart-box { height:220px; }
 
 /* Amortization */
-.amort-wrap { overflow-x:auto; }
-.amort {
-  width:100%; border-collapse:collapse;
-  background: #0c1426; border:1px solid var(--border);
-  border-radius:14px; overflow:hidden;
-}
-.amort thead th { position:sticky; top:0; background:#0c1426; z-index:1; }
-.amort th, .amort td { padding:10px 12px; text-align:right; border-bottom:1px solid var(--border); }
-.amort th:first-child, .amort td:first-child { text-align:left; }
-.amort tbody tr:nth-child(even){ background: var(--panel-elev); }
-.amort tbody tr:hover { filter: brightness(1.05); }
+.amort-wrap { overflow:auto; max-height: 340px; border:1px solid #30363d; border-radius:12px; }
+.amort { width:100%; border-collapse:collapse; }
+.amort th, .amort td { padding:8px 12px; border-bottom:1px solid #1d2636; font-size:12px; }
+.amort th { position:sticky; top:0; background:#0b1324; z-index:1; }
 
-.actions { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
-button.ghost {
-  background: transparent; color: var(--text);
-  border: 1px solid var(--border);
-  padding: 8px 12px; border-radius: 10px; cursor: pointer;
-}
-button.ghost:hover { border-color: var(--accent); }
-
-/* Extras */
-* { scrollbar-color: var(--border) transparent; scrollbar-width: thin; }
-
-/* =========================================================
-   VIN ROW (under "Vehicle & Pricing")
-   ========================================================= */
-.inputs .vin-row {
-  display: flex;
-  gap: 12px;
-  align-items: flex-end;
-  margin-bottom: 12px;
-}
-.inputs .vin-row .field {
-  flex: 1;
-  margin: 0;
-}
-.inputs .vin-btn {
-  min-height: 40px;
-  padding: 8px 14px;
-  white-space: nowrap;
-}
-.inputs .vin-info { 
-  color: var(--muted);
-  font-size: 12px;
-  margin: -2px 0 8px;
-}
-.inputs .vin-error {
-  color: var(--danger, #f85149);
-  font-size: 12px;
-  margin: -2px 0 8px;
+/* ========= Responsive (optional) ========= */
+@media (max-width: 1280px) {
+  /* Slightly narrow right column on mid screens */
+  :root { --col-4: 1.1fr; }
 }
 
-/* =========================================================
-   HIDE THE STRAY HERO DECODE BUTTON
-   ========================================================= */
-.hero .kpi button.ghost {
-  display: none !important;
+@media (max-width: 1024px) {
+  /* Stack to 2 columns */
+  .grid-shell,
+  .hero-kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+  .area-results { grid-column: 1 / -1; }
 }
 
-/* === VIN row polish (under Vehicle & Pricing) ======================= */
-.inputs .vin-row {
-  display: flex;
-  gap: 12px;
-  align-items: flex-end;     /* align button baseline with input */
-  margin-bottom: 12px;       /* same rhythm as other fields */
+@media (max-width: 720px) {
+  /* Full stack on phones */
+  .grid-shell,
+  .hero-kpis {
+    grid-template-columns: 1fr;
+  }
+  .area-vin, .area-vehicle, .area-borrower, .area-results { grid-column: auto; }
 }
-.inputs .vin-row .field {
-  flex: 1;
-  margin: 0;                 /* avoid double spacing inside row */
-}
-
-/* Match input height & add GitHub-blue outline on hover/focus */
-.inputs .vin-btn {
-  min-height: 40px;
-  padding: 8px 14px;
-  white-space: nowrap;
-  transition: border-color .15s, color .15s, background-color .15s;
-}
-
-/* Optional: make the VIN button pop a bit (GitHub-ish blue) */
-.ghost.primary {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.ghost.primary:hover {
-  background: color-mix(in oklab, var(--accent) 12%, transparent);
-  border-color: color-mix(in oklab, var(--accent) 85%, var(--border));
-}
-
-/* VIN helper lines */
-.inputs .vin-info {
-  color: var(--muted);
-  font-size: 12px;
-  margin: -2px 0 8px;
-}
-.inputs .vin-error {
-  color: var(--danger, #f85149);
-  font-size: 12px;
-  margin: -2px 0 8px;
-}
-
-/* Safety net: hide any hero/KPI 'Decode VIN' button if present */
-.hero .kpi button.ghost,
-.hero .decode-vin-hero {
-  display: none !important;
-}
-
