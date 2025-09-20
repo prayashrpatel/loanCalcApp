@@ -1,28 +1,25 @@
-import { http } from './api';
-
-export type VinData = {
+// Simple client for your backend VIN endpoint
+export type VinInfo = {
   vin: string;
-  year: number | null;
-  make: string | null;
-  model: string | null;
-  trim: string | null;
-  bodyClass: string | null;
-  driveType: string | null;
-  fuelType: string | null;
-  engine: string | null;
+  year?: number;
+  make?: string;
+  model?: string;
+  trim?: string;
+  bodyClass?: string;
+  fuelType?: string;
+  engineCylinders?: number;
+  displacementL?: number;
+  engineHP?: number;
+  title?: string;   // e.g. "2003 HONDA Accord EX-V6"
+  msrp?: number;    // optional if your backend enriches it
+  summary?: string; // optional AI blurb
 };
 
-export type VinAI = {
-  summary?: string;
-  inferred?: Array<{ field: string; value: string; confidence: number; reason?: string }>;
-  error?: string;
-  detail?: string;
-} | null;
-
-export type VinResponse =
-  | { ok: true; data: VinData; ai: VinAI; raw?: any }
-  | { ok?: false; error: string };
-
-export async function decodeVin(vin: string) {
-  return http<VinResponse>(`/api/vin?vin=${encodeURIComponent(vin)}`);
+export async function decodeVin(vin: string): Promise<VinInfo> {
+  const res = await fetch(`/api/vin?vin=${encodeURIComponent(vin)}`);
+  const json = await res.json();
+  if (!res.ok || !json?.ok) {
+    throw new Error(json?.error || `VIN decode failed (${res.status})`);
+  }
+  return json.data as VinInfo;
 }
