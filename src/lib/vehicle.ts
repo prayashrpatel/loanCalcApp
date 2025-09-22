@@ -18,13 +18,21 @@ export type VinInfo = {
   manufacturer?: string | null;
   plantCountry?: string | null;
   title?: string | null;
-  summary?: string | null; // will be null while AI is disabled
+  summary?: string | null;              // short optional text
+  source?: 'nhtsa' | 'custom' | string | null;
+  ai?: {
+    filled: string[];                   // e.g., ['msrp','transmission']
+    confidence: number;                 // 0..1
+    notes?: string | null;
+    disclaimer?: string | null;
+  } | null;
 };
 
 const vinCache = new Map<string, VinInfo>();
 
 function isValidVin(v: string) {
-  return /^[A-HJ-NPR-Z0-9]{17}$/.test(v); // excludes I,O,Q
+  // 17 chars, excludes I, O, Q
+  return /^[A-HJ-NPR-Z0-9]{17}$/.test(v);
 }
 
 export async function decodeVin(vin: string): Promise<VinInfo> {
@@ -33,7 +41,7 @@ export async function decodeVin(vin: string): Promise<VinInfo> {
     throw new Error("VIN must be 17 characters (no I/O/Q).");
   }
 
-  // cache within this session
+  // in-session cache
   const cached = vinCache.get(clean);
   if (cached) return cached;
 
@@ -56,7 +64,7 @@ export async function decodeVin(vin: string): Promise<VinInfo> {
     const text = await res.text();
     data = text ? JSON.parse(text) : null;
   } catch {
-    // ignore
+    // ignore JSON parse error; handled below
   }
 
   if (!res.ok) {
