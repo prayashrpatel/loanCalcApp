@@ -1,13 +1,14 @@
 {
   "name": "loancalcapp",
+  "description": "Auto Loan Calculator project - test commit",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "homepage": "https://prayashrpatel.github.io/loanCalcApp",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "dev": "concurrently -n UI,API -c cyan,magenta \"npm run dev:ui\" \"npm --prefix ../autoloan-api run dev\"",
+    "dev:ui": "vite",
+    "build": "vite build",
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
@@ -23,6 +24,7 @@
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.0",
+    "concurrently": "^9.2.1",
     "eslint": "^9.33.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",

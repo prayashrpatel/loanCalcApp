@@ -1,80 +1,75 @@
 // src/lib/vehicle.ts
-
 export type VinInfo = {
   vin: string;
-  year?: number | null;
-  make?: string | null;
-  model?: string | null;
-  trim?: string | null;
-  msrp?: number | null;
-  bodyClass?: string | null;
-  doors?: number | null;
-  driveType?: string | null;
-  transmission?: string | null;
-  fuelType?: string | null;
-  engineCylinders?: number | null;
-  displacementL?: number | null;
-  engineHP?: number | null;
-  manufacturer?: string | null;
-  plantCountry?: string | null;
+  year: number | null;
+  make: string | null;
+  model: string | null;
+  trim: string | null;
+  body: string | null;
+  doors: number | null;
+
+  drive: string | null;
+  transmission: string | null;
+  fuel: string | null;
+  cylinders: number | null;
+  displacement: number | null; // (L)
+  engineHp: number | null;
+
+  manufacturer: string | null;
+  plantCountry: string | null;
+
+  msrp: number | null;
+  summary: string | null;
+
   title?: string | null;
-  summary?: string | null;              // short optional text
-  source?: 'nhtsa' | 'custom' | string | null;
-  ai?: {
-    filled: string[];                   // e.g., ['msrp','transmission']
-    confidence: number;                 // 0..1
-    notes?: string | null;
-    disclaimer?: string | null;
-  } | null;
 };
 
-const vinCache = new Map<string, VinInfo>();
+type BackendVinPayload = VinInfo | { data: any; meta?: any };
 
-function isValidVin(v: string) {
-  // 17 chars, excludes I, O, Q
-  return /^[A-HJ-NPR-Z0-9]{17}$/.test(v);
+export const show = (v: unknown) => (v == null ? "—" : String(v));
+
+/** Unwrap {data, meta} or accept flat; map backend keys -> UI keys */
+export function normalizeVinPayload(raw: BackendVinPayload): { vehicle: VinInfo; meta?: any } {
+  const meta = (raw as any).meta;
+  const v = (raw as any).data ?? raw;
+
+  const vehicle: VinInfo = {
+    vin: v.vin ?? null,
+    year: v.year ?? null,
+    make: v.make ?? null,
+    model: v.model ?? null,
+    trim: v.trim ?? null,
+    body: v.body ?? null,
+    doors: v.doors ?? null,
+
+    // map possible backend names to UI names
+    drive: v.drive ?? v.driveType ?? null,
+    transmission: v.transmission ?? null,
+    fuel: v.fuel ?? null,
+    cylinders: v.cylinders ?? null,
+    displacement: v.displacement ?? v.displacementL ?? null,
+    engineHp: v.engineHp ?? v.engineHP ?? null,
+
+    manufacturer: v.manufacturer ?? null,
+    plantCountry: v.plantCountry ?? null,
+
+    msrp: v.msrp ?? null,
+    summary: v.summary ?? null,
+
+    title: v.title ?? null,
+  };
+
+  return { vehicle, meta };
 }
 
-export async function decodeVin(vin: string): Promise<VinInfo> {
-  const clean = (vin || "").trim().toUpperCase();
-  if (!isValidVin(clean)) {
-    throw new Error("VIN must be 17 characters (no I/O/Q).");
-  }
-
-  // in-session cache
-  const cached = vinCache.get(clean);
-  if (cached) return cached;
-
-  // 10s timeout guard
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 10_000);
-
-  const res = await fetch(`/api/vin?vin=${encodeURIComponent(clean)}`, {
-    method: "GET",
-    headers: { Accept: "application/json" },
-    signal: ctrl.signal,
-  }).catch((e) => {
-    clearTimeout(t);
-    throw new Error(e?.message || "Network error");
-  });
-  clearTimeout(t);
-
-  let data: any = null;
-  try {
-    const text = await res.text();
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    // ignore JSON parse error; handled below
-  }
-
+/** Call backend and normalize for UI */
+export async function decodeVin(vin: string): Promise<{ vehicle: VinInfo; meta?: any }> {
+  const res = await fetch(`/api/vin?vin=${encodeURIComponent(vin)}`);
   if (!res.ok) {
-    const msg = data?.error || `${res.status} ${res.statusText}`;
-    throw new Error(msg);
+    let details = "";
+    try { details = await res.text(); } catch {}
+    throw new Error(`VIN API ${res.status} ${res.statusText}${details ? ` — ${details}` : ""}`);
   }
-
-  const out: VinInfo | undefined = data?.data;
-  if (!out) throw new Error("Malformed VIN response");
-
-  vinCache.set(clean, out);
-  return out;
+  const json = (await res.json()) as BackendVinPayload;
+  return normalizeVinPayload(json);
 }

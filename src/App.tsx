@@ -164,42 +164,48 @@ export default function App() {
   }, [cfg, borrower, evalResult?.rules.approved]);
 
   // VIN handler
-  async function onDecodeVin() {
-    if (!vin) return;
-    setVinError(null);
-    setVinLoading(true);
-    try {
-      const info = await decodeVin(vin);
-      setVinInfo(info);
+  // VIN handler
+async function onDecodeVin() {
+  if (!vin) return;
+  setVinError(null);
+  setVinLoading(true);
+  try {
+    const { vehicle /*, meta*/ } = await decodeVin(vin); // <-- unwrap
+    setVinInfo(vehicle); // <-- set normalized vehicle only
 
-      if (!priceDirty && info.msrp) {
-        setCfg((c) => ({ ...c, price: info.msrp! }));
-        // quick toast
-        const el = document.createElement("div");
-        el.textContent = `Price set from VIN: ${usd.format(info.msrp)}`;
-        Object.assign(el.style, {
-          position: "fixed",
-          right: "16px",
-          bottom: "16px",
-          padding: "10px 12px",
-          background: "#0c1426",
-          color: "#e6edf3",
-          border: "1px solid #30363d",
-          borderRadius: "10px",
-          zIndex: 9999,
-        });
-        document.body.appendChild(el);
-        setTimeout(() => el.remove(), 2000);
-      }
-
-      // After successful decode, consider price "clean"
-      setPriceDirty(false);
-    } catch (e: any) {
-      setVinError(e?.message ?? "Failed to decode VIN");
-    } finally {
-      setVinLoading(false);
+    if (!priceDirty && vehicle.msrp) {
+      setCfg((c) => ({ ...c, price: vehicle.msrp! }));
+      // quick toast
+      const el = document.createElement("div");
+      el.textContent = `Price set from VIN: ${usd.format(vehicle.msrp)}`;
+      Object.assign(el.style, {
+        position: "fixed",
+        right: "16px",
+        bottom: "16px",
+        padding: "10px 12px",
+        background: "#0c1426",
+        color: "#e6edf3",
+        border: "1px solid #30363d",
+        borderRadius: "10px",
+        zIndex: 9999,
+      });
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 2000);
     }
+
+    setPriceDirty(false);
+  } catch (e: any) {
+    const msg =
+      e?.name === "AbortError"
+        ? "VIN request timed out"
+        : typeof e?.message === "string"
+        ? e.message
+        : "Failed to decode VIN";
+    setVinError(msg);
+  } finally {
+    setVinLoading(false);
   }
+}
 
   const approved = evalResult?.rules.approved ?? false;
 
@@ -272,7 +278,7 @@ export default function App() {
             </button>
           </div>
 
-          {vinError && <p className="vin-error" role="alert">{vinError}</p>}
+          {vinError && <p className="vin-error" role="alert">{String(vinError)}</p>}
 
           {vinInfo && (
             <div className="vin-card">
@@ -299,25 +305,25 @@ export default function App() {
 
               {/* Details grid (use vin-kv to avoid clashing with .kv in Decision box) */}
               <dl className="vin-kv">
-                <dt>Year</dt><dd>{vinInfo.year ?? "—"}</dd>
-                <dt>Make</dt><dd>{vinInfo.make ?? "—"}</dd>
-                <dt>Model</dt><dd>{vinInfo.model ?? "—"}</dd>
-                <dt>Trim</dt><dd>{vinInfo.trim ?? "—"}</dd>
+              <dt>Year</dt><dd>{vinInfo.year ?? "—"}</dd>
+              <dt>Make</dt><dd>{vinInfo.make ?? "—"}</dd>
+              <dt>Model</dt><dd>{vinInfo.model ?? "—"}</dd>
+              <dt>Trim</dt><dd>{vinInfo.trim ?? "—"}</dd>
 
-                <dt>Body</dt><dd>{vinInfo.bodyClass ?? "—"}</dd>
-                <dt>Doors</dt><dd>{vinInfo.doors ?? "—"}</dd>
-                <dt>Drive</dt><dd>{vinInfo.driveType ?? "—"}</dd>
-                <dt>Transmission</dt><dd>{vinInfo.transmission ?? "—"}</dd>
+              <dt>Body</dt><dd>{vinInfo.body ?? "—"}</dd>
+              <dt>Doors</dt><dd>{vinInfo.doors ?? "—"}</dd>
+              <dt>Drive</dt><dd>{vinInfo.drive ?? "—"}</dd>
+              <dt>Transmission</dt><dd>{vinInfo.transmission ?? "—"}</dd>
 
-                <dt>Fuel</dt><dd>{vinInfo.fuelType ?? "—"}</dd>
-                <dt>Cylinders</dt><dd>{vinInfo.engineCylinders ?? "—"}</dd>
-                <dt>Displacement (L)</dt><dd>{vinInfo.displacementL ?? "—"}</dd>
-                <dt>Engine HP</dt><dd>{vinInfo.engineHP ?? "—"}</dd>
+              <dt>Fuel</dt><dd>{vinInfo.fuel ?? "—"}</dd>
+              <dt>Cylinders</dt><dd>{vinInfo.cylinders ?? "—"}</dd>
+              <dt>Displacement (L)</dt><dd>{vinInfo.displacement ?? "—"}</dd>
+              <dt>Engine HP</dt><dd>{vinInfo.engineHp ?? "—"}</dd>
 
-                <dt>Manufacturer</dt><dd>{vinInfo.manufacturer ?? "—"}</dd>
-                <dt>Plant Country</dt><dd>{vinInfo.plantCountry ?? "—"}</dd>
-                <dt>MSRP</dt><dd>{vinInfo.msrp != null ? `$${vinInfo.msrp.toLocaleString()}` : "—"}</dd>
-              </dl>
+              <dt>Manufacturer</dt><dd>{vinInfo.manufacturer ?? "—"}</dd>
+              <dt>Plant Country</dt><dd>{vinInfo.plantCountry ?? "—"}</dd>
+              <dt>MSRP</dt><dd>{vinInfo.msrp != null ? `$${vinInfo.msrp.toLocaleString()}` : "—"}</dd>
+            </dl>
             </div>
           )}
         </section>

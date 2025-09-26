@@ -1,4 +1,7 @@
 # Auto Loan Calculator + Affordability & Risk Demo
+## Development Notes
+- Added commit to test Git flow.
+
 
 A simple end-to-end demo that:
 - Takes borrower and vehicle info  
