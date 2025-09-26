@@ -320,8 +320,6 @@ async function onDecodeVin() {
               <dt>Displacement (L)</dt><dd>{vinInfo.displacement ?? "—"}</dd>
               <dt>Engine HP</dt><dd>{vinInfo.engineHp ?? "—"}</dd>
 
-              <dt>Manufacturer</dt><dd>{vinInfo.manufacturer ?? "—"}</dd>
-              <dt>Plant Country</dt><dd>{vinInfo.plantCountry ?? "—"}</dd>
               <dt>MSRP</dt><dd>{vinInfo.msrp != null ? `$${vinInfo.msrp.toLocaleString()}` : "—"}</dd>
             </dl>
             </div>

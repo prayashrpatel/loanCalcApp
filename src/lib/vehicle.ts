@@ -5,7 +5,13 @@ export type VinInfo = {
   make: string | null;
   model: string | null;
   trim: string | null;
+
+  /** Physical body class from NHTSA (e.g., "Sedan", "SUV") */
   body: string | null;
+
+  /** Marketing style if available (e.g., "4-Door Coupe", "Sportback", "Gran Coupe") */
+  style: string | null;
+
   doors: number | null;
 
   drive: string | null;
@@ -15,6 +21,7 @@ export type VinInfo = {
   displacement: number | null; // (L)
   engineHp: number | null;
 
+  // These can stay even if not displayed in UI (harmless)
   manufacturer: string | null;
   plantCountry: string | null;
 
@@ -26,6 +33,7 @@ export type VinInfo = {
 
 type BackendVinPayload = VinInfo | { data: any; meta?: any };
 
+/** Render helper: shows em-dash for null/undefined; keeps 0 as "0". */
 export const show = (v: unknown) => (v == null ? "—" : String(v));
 
 /** Unwrap {data, meta} or accept flat; map backend keys -> UI keys */
@@ -39,7 +47,10 @@ export function normalizeVinPayload(raw: BackendVinPayload): { vehicle: VinInfo;
     make: v.make ?? null,
     model: v.model ?? null,
     trim: v.trim ?? null,
-    body: v.body ?? null,
+
+    body: v.body ?? v.bodyClass ?? null,   // tolerate older names
+    style: v.style ?? null,                 // NEW: marketing style
+
     doors: v.doors ?? null,
 
     // map possible backend names to UI names
@@ -67,7 +78,9 @@ export async function decodeVin(vin: string): Promise<{ vehicle: VinInfo; meta?:
   const res = await fetch(`/api/vin?vin=${encodeURIComponent(vin)}`);
   if (!res.ok) {
     let details = "";
-    try { details = await res.text(); } catch {}
+    try {
+      details = await res.text();
+    } catch {}
     throw new Error(`VIN API ${res.status} ${res.statusText}${details ? ` — ${details}` : ""}`);
   }
   const json = (await res.json()) as BackendVinPayload;
