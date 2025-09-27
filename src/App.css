@@ -1,159 +1,158 @@
-:root {
-  --bg: #0a1222;
-  --panel: #0b1324;
-  --panel-2: #0c1426;
-  --border: #30363d;
+/* ====== Theme (keeps your existing dark vibe) ====== */
+:root{
+  --bg: #0b1220;
+  --panel: #0f172a;
+  --border: #1f2937;
   --muted: #8b949e;
   --text: #e6edf3;
-  --accent: #58a6ff;
-  --accent-2: #f2cc60;
-}
-* { box-sizing: border-box; }
-html, body, #root { height: 100%; }
-body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  --primary: #1f6feb;     /* links/accents */
+  --accent: #58a6ff;      /* charts */
+  --accent-2: #f2cc60;    /* charts (interest) */
+  --radius: 16px;         /* was 14px */
+  --shadow: 0 6px 24px rgba(0,0,0,.35);
+  --gap: 20px;            /* was 16px — roomier gutter */
 
-.container {
-  display: flex; justify-content: center;
-  padding: 24px;
-}
-.app { width: 1180px; }
-.page-title {
-  margin: 0 0 14px;
-  font-size: 18px; font-weight: 700;
-  color: var(--text);
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 14px;
+  /* Right rail width (decision + charts + hero mini-cards) */
+  --rightW: 360px;        /* try 340/320 to make left even wider */
 }
 
-/* KPI strip */
-.grid-shell {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1.2fr;
-  grid-auto-rows: min-content;
-  gap: 24px;
+*{ box-sizing:border-box }
+html,body,#root{ height:100% }
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font:15.5px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; /* bigger base */
+}
+
+/* ====== Page container ====== */
+.page{
+  max-width: clamp(1024px, 92vw, 1320px); /* wider; less side blank space */
+  margin:0 auto; padding:24px 16px 80px;
+}
+
+/* ====== Buttons / chips ====== */
+.btn{
+  border:1px solid var(--border); background:#0c1426; color:var(--text);
+  padding:10px 16px; border-radius:12px; cursor:pointer; min-height:44px;  /* taller */
+}
+.btn.primary{ background:var(--primary); border-color:transparent }
+.btn.ghost{ background:transparent }
+.btn.small{ padding:6px 10px; font-size:12px; min-height:unset }
+
+.chip{
+  padding:6px 10px; background:#0c1426; border:1px solid var(--border);
+  border-radius:100px; color:var(--text)
+}
+
+/* ====== Panels ====== */
+.panel{
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:var(--radius); box-shadow:var(--shadow); padding:20px; /* was 16px */
+}
+.panel.wide{ margin-top:24px }
+.panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px }
+.panel-title{ margin:0; font-size:16px }
+
+/* ====== Fields ====== */
+.field{ display:flex; flex-direction:column; gap:6px; margin-bottom:12px }
+.field .label{ color:var(--muted); font-size:12px }
+.field input, .field select{
+  background:#0c1426; color:var(--text); border:1px solid var(--border);
+  border-radius:12px; padding:10px 12px; outline:none; min-height:44px;   /* taller controls */
+}
+.field input:focus, .field select:focus{ border-color:#2d81ff }
+.two{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
+
+/* ====== VIN bits ====== */
+.vin-row{ display:grid; grid-template-columns:1fr auto; gap:10px; margin-bottom:8px }
+.vin-samples{ margin:6px 0 10px }
+.vin-error{ color:#ff8a8a; margin:6px 0 0 }
+.vin-card{ border:1px dashed var(--border); border-radius:12px; padding:12px; margin-top:8px }
+.vin-title .title{ font-weight:600 }
+.vin-title .sub{ color:var(--muted); display:flex; gap:10px; align-items:center; margin-top:4px }
+.vin-title .copy{ border:1px solid var(--border); background:#0c1426; color:var(--text); padding:2px 8px; border-radius:100px }
+.vin-kv{ display:grid; grid-template-columns:140px 1fr; gap:6px 14px; margin-top:10px } /* wider label column */
+.vin-kv dt{ color:var(--muted) }
+.vin-kv dd{ margin:0 }
+
+/* ====== Top nav ====== */
+.topnav{
+  display:grid; grid-template-columns:1fr auto auto; gap:12px;
+  align-items:center; padding:12px 16px; border:1px solid var(--border);
+  background:var(--panel); border-radius:var(--radius); box-shadow:var(--shadow); margin-bottom:18px;
+}
+.brand{ font-weight:600 }
+.links{ display:flex; gap:18px; color:var(--muted) }
+.links a{ cursor:pointer }
+.auth{ text-align:right }
+
+/* ====== Hero typography ====== */
+.hero-amount{ font-size: clamp(48px, 6vw, 72px); font-weight:700 } /* fluid hero */
+.unit{ font-size:.45em; color:var(--muted) }
+.hero-sub{ color:var(--muted); margin:6px 0 12px }
+
+/* mini cards used in hero-right and right column */
+.mini-card{
+  background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
+  padding:16px 16px; box-shadow:var(--shadow); width:100%;
+}
+.mini-label{ color:var(--muted); font-size:12px; margin-bottom:4px }
+.mini-value{ font-weight:600; font-size:20px } /* bigger */
+.mini-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px }
+.badge{ display:inline-block; padding:4px 10px; border-radius:100px; border:1px solid var(--border); background:#111827 }
+.badge.ok{ background:#0b2e15; border-color:#1d4d2b; color:#8bffb6 }
+.badge.bad{ background:#381010; border-color:#5a1f1f; color:#ffb3b3 }
+
+/* ====== Unified grid for hero + body (ensures right-edge alignment) ====== */
+.content-grid{
+  display:grid;
+  grid-template-columns: 1.25fr 1fr var(--rightW);  /* wider left column */
+  gap: var(--gap);
+  margin-bottom: 20px;
   align-items: start;
 }
-.kpi {
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px 18px;
-  min-height: 72px;
-  display: flex; flex-direction: column; justify-content: center;
-}
-.kpi .label { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
-.kpi .value { font-size: 22px; font-weight: 700; }
-.kpi .unit { color: var(--muted); font-size: 14px; font-weight: 500; }
-.kpi-1 { grid-column: 1; }
-.kpi-2 { grid-column: 2; }
-.kpi-3 { grid-column: 3; }
-.kpi-4 { grid-column: 4; }
+/* hero placement inside unified grid */
+.hero-left{ grid-column: 1 / 3; justify-self: stretch; }
+.hero-card{ width:100%; padding:20px; } /* real panel look */
 
-/* Panels */
-.panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 18px;
-}
-.area-vin { grid-column: 1; }
-.area-vehicle { grid-column: 2; }
-.area-borrower { grid-column: 3; }
-.area-results { grid-column: 4; }
-
-.panel h2 { margin: 0 0 10px; font-size: 14px; }
-
-/* Fields */
-.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-.field .label { color: var(--muted); font-size: 12px; }
-.field input, .field select {
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  color: #c9d1d9;
-  border-radius: 10px; padding: 10px 12px; outline: none;
-}
-.field input:focus, .field select:focus { border-color: #4b93ff; }
-.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-.ghost.primary, .panel button {
-  border: 1px solid #2b5ac7; background: #1a3ea6;
-  border-radius: 10px; padding: 10px 12px; color: white; font-weight: 600; cursor: pointer;
-}
-.panel button[disabled] { opacity: .6; cursor: not-allowed; }
-.vin-btn { margin-top: 10px; width: 100%; }
-
-/* VIN panel */
-.vin-row {
+/* >>> Added block: hero-right spacing <<< */
+.hero-right{
+  grid-column: 3;
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
-  margin-bottom: 6px;
-}
-.vin-error { color: #ff8a8a; margin-top: 6px; }
-.vin-samples { margin-top: 6px; display: flex; gap: 8px; }
-.chip {
-  border: 1px solid var(--border); background: var(--panel);
-  border-radius: 999px; padding: 4px 10px; cursor: pointer; color: var(--text);
-}
-.chip:hover { border-color: #4b93ff; }
-
-.vin-card {
-  margin-top: 10px;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px;
-}
-.vin-title .title { font-weight: 700; font-size: 18px; }
-.vin-title .sub { color: var(--muted); margin-top: 4px; display: flex; gap: 8px; align-items: center; }
-.vin-title .copy {
-  border: 1px solid #2b5ac7; background: #1a3ea6;
-  border-radius: 8px; padding: 4px 8px; color: #fff; cursor: pointer;
+  gap: 12px;  /* adjust this value to change spacing between Financed / APR / Total cost */
 }
 
-/* VIN details grid (separate from .kv used in Decision) */
-.vin-kv {
-  margin-top: 10px;
-  display: grid;
-  grid-template-columns: 140px 1fr;
-  column-gap: 14px; row-gap: 6px;
-}
-.vin-kv dt { color: var(--muted); }
-.vin-kv dd { margin: 0; }
+/* body columns inside unified grid */
+.col-1{ grid-column: 1; }
+.col-2{ grid-column: 2; }
+.col-3{ grid-column: 3; }
 
-/* Decision */
-.badge { display: inline-block; padding: 6px 10px; border-radius: 999px; font-size: 12px; }
-.badge.ok  { background: #173d2a; color: #6ee7a7; border: 1px solid #256b45; }
-.badge.bad { background: #3d1a1a; color: #fda4a4; border: 1px solid #6b2525; }
-.kv { display: flex; justify-content: space-between; margin: 6px 0; }
-.kv span { color: var(--muted); }
-.violations { margin: 8px 0 0; padding-left: 18px; color: #c9d1d9; }
+/* Set some minimum heights so the row feels substantial */
+.col-1, .col-2{ min-height: 520px; }     /* VIN + Vehicle & Pricing */
 
-/* Right column */
-.area-results h2 { margin-top: 0; }
-.area-results .summary .row {
-  display: flex; justify-content: space-between;
-  padding: 6px 0; border-bottom: 1px dashed #263041;
-}
-.charts { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 12px; margin-bottom: 16px; }
-.chart-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
-.chart-title { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
-.chart-box { height: 220px; }
+/* right column container so cards stack neatly */
+.right-col{ display:grid; gap:12px; width:100% }
 
-/* Amortization */
-.amort-wrap { overflow: auto; max-height: 340px; border: 1px solid var(--border); border-radius: 12px; }
-.amort { width: 100%; border-collapse: collapse; }
-.amort th, .amort td { padding: 8px 12px; border-bottom: 1px solid #1d2636; font-size: 12px; }
-.amort th { position: sticky; top: 0; background: var(--panel); z-index: 1; }
+/* Neutralize any legacy grid rules (kept for safety) */
+.grid{ display: contents; }
+.hero{ display: contents; }
 
-/* Responsive */
-@media (max-width: 1260px) {
-  .app { width: 100%; }
-}
-@media (max-width: 1024px) {
-  .grid-shell { grid-template-columns: 1fr; }
-  .kpi-1, .kpi-2, .kpi-3, .kpi-4 { grid-column: 1; }
-  .area-vin, .area-vehicle, .area-borrower, .area-results { grid-column: 1; }
+/* ====== Charts (taller) ====== */
+.chart-box{ height:250px; }     /* was 210px */
+.chart-box.donut{ height:270px }/* was 240px */
+.chart-title{ color:var(--muted); margin-bottom:8px }
+
+/* ====== Amortization table ====== */
+.amort-wrap{ overflow:auto; border:1px solid var(--border); border-radius:12px; max-height: 600px; }
+.amort{ width:100%; border-collapse:collapse; min-width:640px }
+.amort th, .amort td{ padding:12px 14px; border-bottom:1px solid var(--border) } /* roomier cells */
+.amort thead th{ text-align:left; color:var(--muted); font-weight:500; position:sticky; top:0; background:var(--panel) }
+.amort tbody tr:hover{ background:#0c1426 }
+
+/* ====== Responsive ====== */
+@media (max-width: 980px){
+  .content-grid{ grid-template-columns: 1fr; }
+  .hero-left, .hero-right, .col-1, .col-2, .col-3{ grid-column: auto; }
+  .right-col{ grid-template-columns: 1fr; }
+  .col-1, .col-2{ min-height: unset; }
+  .chart-box, .chart-box.donut{ height:220px; }
 }
