@@ -1,4 +1,4 @@
-/* ====== Theme (keeps your existing dark vibe) ====== */
+/* ====== Theme ====== */
 :root{
   --bg: #0b1220;
   --panel: #0f172a;
@@ -8,31 +8,83 @@
   --primary: #1f6feb;     /* links/accents */
   --accent: #58a6ff;      /* charts */
   --accent-2: #f2cc60;    /* charts (interest) */
-  --radius: 16px;         /* was 14px */
+  --radius: 16px;
   --shadow: 0 6px 24px rgba(0,0,0,.35);
-  --gap: 20px;            /* was 16px — roomier gutter */
+  --gap: 20px;
 
   /* Right rail width (decision + charts + hero mini-cards) */
-  --rightW: 360px;        /* try 340/320 to make left even wider */
+  --rightW: 360px;
+
+  /* Shared control height for VIN row */
+  --vin-control-h: 44px;
 }
 
 *{ box-sizing:border-box }
 html,body,#root{ height:100% }
 body{
   margin:0; background:var(--bg); color:var(--text);
-  font:15.5px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; /* bigger base */
+  font:15.5px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
 }
 
 /* ====== Page container ====== */
 .page{
-  max-width: clamp(1024px, 92vw, 1320px); /* wider; less side blank space */
+  max-width: clamp(1024px, 92vw, 1320px);
   margin:0 auto; padding:24px 16px 80px;
+  position: relative;
 }
+
+/* When quickbar is present, give left padding so content clears it */
+.page.has-quickbar{
+  padding-left: 96px; /* width of quickbar */
+}
+
+/* ====== Quickbar (Option B) ====== */
+.quickbar{
+  position: fixed;
+  left: 16px;
+  top: 110px;
+  width: 64px;
+  display: grid;
+  gap: 12px;
+  z-index: 20;
+}
+.qbtn{
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border: 1px solid var(--border);
+  background: #0c1426;
+  color: var(--text);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.qbtn .icon{ width: 20px; height: 20px; stroke: currentColor; fill:none; stroke-width:1.8 }
+.qbtn span{ font-size: 11px; color: var(--muted); }
+
+/* Drawer */
+.drawer-mask{
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 30;
+}
+.drawer{
+  position: fixed; top: 0; right: 0; height: 100vh; width: min(420px, 92vw);
+  background: var(--panel); border-left: 1px solid var(--border);
+  box-shadow: var(--shadow); z-index: 31; display:flex; flex-direction: column;
+}
+.drawer-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 16px 18px; border-bottom:1px solid var(--border)
+}
+.drawer-body{ padding: 14px 18px; overflow:auto }
+.bullets{ margin: 8px 0 0 18px }
+.bullets li{ margin: 6px 0 }
 
 /* ====== Buttons / chips ====== */
 .btn{
   border:1px solid var(--border); background:#0c1426; color:var(--text);
-  padding:10px 16px; border-radius:12px; cursor:pointer; min-height:44px;  /* taller */
+  padding:10px 16px; border-radius:12px; cursor:pointer; min-height:44px;
 }
 .btn.primary{ background:var(--primary); border-color:transparent }
 .btn.ghost{ background:transparent }
@@ -46,7 +98,7 @@ body{
 /* ====== Panels ====== */
 .panel{
   background:var(--panel); border:1px solid var(--border);
-  border-radius:var(--radius); box-shadow:var(--shadow); padding:20px; /* was 16px */
+  border-radius:var(--radius); box-shadow:var(--shadow); padding:20px;
 }
 .panel.wide{ margin-top:24px }
 .panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px }
@@ -57,13 +109,20 @@ body{
 .field .label{ color:var(--muted); font-size:12px }
 .field input, .field select{
   background:#0c1426; color:var(--text); border:1px solid var(--border);
-  border-radius:12px; padding:10px 12px; outline:none; min-height:44px;   /* taller controls */
+  border-radius:12px; padding:10px 12px; outline:none; min-height:44px;
 }
 .field input:focus, .field select:focus{ border-color:#2d81ff }
 .two{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
 
 /* ====== VIN bits ====== */
-.vin-row{ display:grid; grid-template-columns:1fr auto; gap:10px; margin-bottom:8px; align-items:center; }
+.vin-row{
+  display:grid; grid-template-columns: 1fr auto; gap:10px; margin-bottom:8px;
+  align-items: end;
+}
+.vin-row input{ height: var(--vin-control-h) }
+.vin-row button.btn{
+  height: var(--vin-control-h); padding: 10px 14px; white-space: nowrap;
+}
 
 .vin-samples{ margin:6px 0 10px }
 .vin-error{ color:#ff8a8a; margin:6px 0 0 }
@@ -71,7 +130,7 @@ body{
 .vin-title .title{ font-weight:600 }
 .vin-title .sub{ color:var(--muted); display:flex; gap:10px; align-items:center; margin-top:4px }
 .vin-title .copy{ border:1px solid var(--border); background:#0c1426; color:var(--text); padding:2px 8px; border-radius:100px }
-.vin-kv{ display:grid; grid-template-columns:140px 1fr; gap:6px 14px; margin-top:10px } /* wider label column */
+.vin-kv{ display:grid; grid-template-columns:140px 1fr; gap:6px 14px; margin-top:10px }
 .vin-kv dt{ color:var(--muted) }
 .vin-kv dd{ margin:0 }
 
@@ -87,7 +146,7 @@ body{
 .auth{ text-align:right }
 
 /* ====== Hero typography ====== */
-.hero-amount{ font-size: clamp(48px, 6vw, 72px); font-weight:700 } /* fluid hero */
+.hero-amount{ font-size: clamp(48px, 6vw, 72px); font-weight:700 }
 .unit{ font-size:.45em; color:var(--muted) }
 .hero-sub{ color:var(--muted); margin:6px 0 12px }
 
@@ -97,92 +156,61 @@ body{
   padding:16px 16px; box-shadow:var(--shadow); width:100%;
 }
 .mini-label{ color:var(--muted); font-size:12px; margin-bottom:4px }
-.mini-value{ font-weight:600; font-size:20px } /* bigger */
+.mini-value{ font-weight:600; font-size:20px }
 .mini-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px }
 .badge{ display:inline-block; padding:4px 10px; border-radius:100px; border:1px solid var(--border); background:#111827 }
 .badge.ok{ background:#0b2e15; border-color:#1d4d2b; color:#8bffb6 }
 .badge.bad{ background:#381010; border-color:#5a1f1f; color:#ffb3b3 }
 
-/* ====== Unified grid for hero + body (ensures right-edge alignment) ====== */
+/* ====== Unified grid for hero + body ====== */
 .content-grid{
   display:grid;
-  grid-template-columns: 1.25fr 1fr var(--rightW);  /* wider left column */
+  grid-template-columns: 1.25fr 1fr var(--rightW);
   gap: var(--gap);
   margin-bottom: 20px;
   align-items: start;
 }
-/* hero placement inside unified grid */
 .hero-left{ grid-column: 1 / 3; justify-self: stretch; }
-.hero-card{ width:100%; padding:20px; } /* real panel look */
+.hero-card{ width:100%; padding:20px; }
 
-/* >>> Added block: hero-right spacing <<< */
 .hero-right{
   grid-column: 3;
   display: grid;
-  gap: 12px;  /* adjust this value to change spacing between Financed / APR / Total cost */
+  gap: 12px;
 }
 
-/* body columns inside unified grid */
+/* body columns */
 .col-1{ grid-column: 1; }
 .col-2{ grid-column: 2; }
 .col-3{ grid-column: 3; }
 
-/* Set some minimum heights so the row feels substantial */
-.col-1, .col-2{ min-height: 520px; }     /* VIN + Vehicle & Pricing */
+/* Set some minimum heights */
+.col-1, .col-2{ min-height: 520px; }
 
 /* right column container so cards stack neatly */
 .right-col{ display:grid; gap:12px; width:100% }
 
-/* Neutralize any legacy grid rules (kept for safety) */
-.grid{ display: contents; }
-.hero{ display: contents; }
-
-/* ====== Charts (taller) ====== */
-.chart-box{ height:250px; }     /* was 210px */
-.chart-box.donut{ height:270px }/* was 240px */
+/* ====== Charts ====== */
+.chart-box{ height:250px; }
+.chart-box.donut{ height:270px }
 .chart-title{ color:var(--muted); margin-bottom:8px }
 
 /* ====== Amortization table ====== */
 .amort-wrap{ overflow:auto; border:1px solid var(--border); border-radius:12px; max-height: 600px; }
 .amort{ width:100%; border-collapse:collapse; min-width:640px }
-.amort th, .amort td{ padding:12px 14px; border-bottom:1px solid var(--border) } /* roomier cells */
+.amort th, .amort td{ padding:12px 14px; border-bottom:1px solid var(--border) }
 .amort thead th{ text-align:left; color:var(--muted); font-weight:500; position:sticky; top:0; background:var(--panel) }
 .amort tbody tr:hover{ background:#0c1426 }
+.amort.mini{ min-width:auto }
 
 /* ====== Responsive ====== */
 @media (max-width: 980px){
+  .page.has-quickbar{ padding-left: 16px; }
+  .quickbar{ position: static; grid-auto-flow: column; width: auto; grid-template-columns: repeat(5, minmax(0,1fr)); margin-bottom: 12px; }
+  .qbtn{ padding: 8px 10px }
   .content-grid{ grid-template-columns: 1fr; }
   .hero-left, .hero-right, .col-1, .col-2, .col-3{ grid-column: auto; }
   .right-col{ grid-template-columns: 1fr; }
   .col-1, .col-2{ min-height: unset; }
   .chart-box, .chart-box.donut{ height:220px; }
-}
-
-/* ==== VIN row: align Decode button with the input ==== */
-:root { --vin-control-h: 44px; }   
-
-.vin-row{
-  display: grid;
-  grid-template-columns: 1fr auto;  
-  column-gap: 12px;
-  align-items: end;                 
-}
-
-.vin-row .field{ margin: 0; }       
-
-.vin-row input{
-  height: var(--vin-control-h);     
-}
-
-.vin-row button.btn{
-  height: var(--vin-control-h);     
-  line-height: calc(var(--vin-control-h) - 2px); 
-  padding: 0 14px;
-  width: auto;                      
-}
-
-/* Optional: stack on small screens */
-@media (max-width: 560px){
-  .vin-row{ grid-template-columns: 1fr; align-items: stretch; }
-  .vin-row button.btn{ width: 100%; }
 }

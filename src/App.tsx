@@ -85,6 +85,23 @@ function NumberField({
   );
 }
 
+/* -------------------- sidebar icons (inline SVGs) -------------------- */
+const IconCompare = () => (
+  <svg className="icon" viewBox="0 0 24 24"><path d="M8 3v18M16 3v18M4 7h8M12 17h8" /></svg>
+);
+const IconLink = () => (
+  <svg className="icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 1 0-7l2-2a5 5 0 0 1 7 7l-1 1M14 11a5 5 0 0 1 0 7l-2 2a5 5 0 0 1-7-7l1-1" /></svg>
+);
+const IconTag = () => (
+  <svg className="icon" viewBox="0 0 24 24"><path d="M20 10L12 2H4v8l8 8 8-8Z" /><circle cx="7" cy="7" r="1.5" /></svg>
+);
+const IconReceipt = () => (
+  <svg className="icon" viewBox="0 0 24 24"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2Z" /><path d="M8 7h8M8 11h8M8 15h8" /></svg>
+);
+const IconLightbulb = () => (
+  <svg className="icon" viewBox="0 0 24 24"><path d="M9 18h6M8 14a6 6 0 1 1 8 0c-1 1-1 2-1 3H9c0-1 0-2-1-3Z" /><path d="M10 22h4" /></svg>
+);
+
 /* ======================== APP ======================== */
 export default function App() {
   const [cfg, setCfg] = useState<LoanConfig>(DEFAULT_CFG);
@@ -105,6 +122,18 @@ export default function App() {
   const [evalResult, setEvalResult] = useState<EvaluationResult | null>(null);
   const [evalLoading, setEvalLoading] = useState(false);
   const [evalError, setEvalError] = useState<string | null>(null);
+
+  // Drawer state for sidebar (Option B)
+  type SidebarKey = "compare" | "related" | "rebates" | "fees" | "strategies" | null;
+  const [drawer, setDrawer] = useState<SidebarKey>(null);
+
+  useEffect(() => {
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") setDrawer(null);
+    }
+    window.addEventListener("keydown", onEsc);
+    return () => window.removeEventListener("keydown", onEsc);
+  }, []);
 
   // Local math
   const salesTax = useMemo(() => computeSalesTax(cfg), [cfg]);
@@ -133,7 +162,9 @@ export default function App() {
         if (alive) setEvalLoading(false);
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [cfg, borrower]);
 
   /* -------------------- tax preset by state -------------------- */
@@ -158,7 +189,9 @@ export default function App() {
         if (alive) setOffersLoading(false);
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [cfg, borrower, evalResult?.rules.approved]);
 
   /* -------------------- VIN handler -------------------- */
@@ -207,30 +240,60 @@ export default function App() {
 
   /* ======================== RENDER ======================== */
   return (
-    <div className="page">
+    <div className="page has-quickbar">
       {/* -------- Top Nav -------- */}
       <header className="topnav">
-        <div className="brand">Auto <strong>Loan Calculator</strong></div>
+        <div className="brand">
+          Auto <strong>Loan Calculator</strong>
+        </div>
         <nav className="links">
           <a>Home</a>
           <a>Features</a>
           <a>Contact</a>
         </nav>
-        <div className="auth"><button className="btn small ghost">Log in</button></div>
+        <div className="auth">
+          <button className="btn small ghost">Log in</button>
+        </div>
       </header>
 
-      {/* ======= Unified grid for HERO + BODY ======= */}
+      {/* ---- Slim Vertical Quickbar (Option B) ---- */}
+      <aside className="quickbar" role="navigation" aria-label="Helpful panels">
+        <button className="qbtn" onClick={() => setDrawer("compare")}>
+          <IconCompare />
+          <span>Compare</span>
+        </button>
+        <button className="qbtn" onClick={() => setDrawer("related")}>
+          <IconLink />
+          <span>Related</span>
+        </button>
+        <button className="qbtn" onClick={() => setDrawer("rebates")}>
+          <IconTag />
+          <span>Vehicle Rebates</span>
+        </button>
+        <button className="qbtn" onClick={() => setDrawer("fees")}>
+          <IconReceipt />
+          <span>Fees</span>
+        </button>
+        <button className="qbtn" onClick={() => setDrawer("strategies")}>
+          <IconLightbulb />
+          <span>AutoLoan Strategies</span>
+        </button>
+      </aside>
+
+      {/* ======= HERO + BODY GRID ======= */}
       <div className="content-grid">
-        {/* HERO LEFT: spans columns 1–2 */}
+        {/* HERO LEFT */}
         <section className="hero-left">
-          <div className="hero-amount">
-            {usd.format(summary.payment)} <span className="unit">/mo</span>
+          <div className="panel hero-card">
+            <div className="hero-amount">
+              {usd.format(summary.payment)} <span className="unit">/mo</span>
+            </div>
+            <p className="hero-sub">Estimated monthly payment</p>
+            <button className="btn primary">See details</button>
           </div>
-          <p className="hero-sub">Estimated monthly payment</p>
-          <button className="btn primary">See details</button>
         </section>
 
-        {/* HERO RIGHT: the three mini-cards aligned with right column */}
+        {/* HERO RIGHT mini-cards */}
         <aside className="hero-right">
           <div className="mini-card">
             <div className="mini-label">Financed amount</div>
@@ -246,7 +309,7 @@ export default function App() {
           </div>
         </aside>
 
-        {/* BODY: Left column (VIN) */}
+        {/* LEFT: VIN */}
         <section className="panel col-1">
           <div className="panel-head">
             <h3 className="panel-title">VIN Decoder</h3>
@@ -292,14 +355,20 @@ export default function App() {
             </button>
           </div>
 
-          {vinError && <p className="vin-error" role="alert">{String(vinError)}</p>}
+          {vinError && (
+            <p className="vin-error" role="alert">
+              {String(vinError)}
+            </p>
+          )}
 
           {vinInfo && (
             <div className="vin-card">
               <div className="vin-title">
                 <div className="title">
                   {vinInfo.title ??
-                    `${vinInfo.year ?? "—"} ${vinInfo.make ?? ""} ${vinInfo.model ?? ""}`.trim()}
+                    `${vinInfo.year ?? "—"} ${vinInfo.make ?? ""} ${
+                      vinInfo.model ?? ""
+                    }`.trim()}
                 </div>
                 <div className="sub">
                   VIN: <code>{vinInfo.vin}</code>
@@ -313,31 +382,50 @@ export default function App() {
                 </div>
               </div>
 
-              {vinInfo.summary && <p className="vin-summary">{vinInfo.summary}</p>}
+              {vinInfo.summary && (
+                <p className="vin-summary">{vinInfo.summary}</p>
+              )}
 
               <dl className="vin-kv">
-                <dt>Year</dt><dd>{vinInfo.year ?? "—"}</dd>
-                <dt>Make</dt><dd>{vinInfo.make ?? "—"}</dd>
-                <dt>Model</dt><dd>{vinInfo.model ?? "—"}</dd>
-                <dt>Trim</dt><dd>{vinInfo.trim ?? "—"}</dd>
+                <dt>Year</dt>
+                <dd>{vinInfo.year ?? "—"}</dd>
+                <dt>Make</dt>
+                <dd>{vinInfo.make ?? "—"}</dd>
+                <dt>Model</dt>
+                <dd>{vinInfo.model ?? "—"}</dd>
+                <dt>Trim</dt>
+                <dd>{vinInfo.trim ?? "—"}</dd>
 
-                <dt>Body</dt><dd>{vinInfo.body ?? "—"}</dd>
-                <dt>Doors</dt><dd>{vinInfo.doors ?? "—"}</dd>
-                <dt>Drive</dt><dd>{vinInfo.drive ?? "—"}</dd>
-                <dt>Transmission</dt><dd>{vinInfo.transmission ?? "—"}</dd>
+                <dt>Body</dt>
+                <dd>{vinInfo.body ?? "—"}</dd>
+                <dt>Doors</dt>
+                <dd>{vinInfo.doors ?? "—"}</dd>
+                <dt>Drive</dt>
+                <dd>{vinInfo.drive ?? "—"}</dd>
+                <dt>Transmission</dt>
+                <dd>{vinInfo.transmission ?? "—"}</dd>
 
-                <dt>Fuel</dt><dd>{vinInfo.fuel ?? "—"}</dd>
-                <dt>Cylinders</dt><dd>{vinInfo.cylinders ?? "—"}</dd>
-                <dt>Displacement (L)</dt><dd>{vinInfo.displacement ?? "—"}</dd>
-                <dt>Engine HP</dt><dd>{vinInfo.engineHp ?? "—"}</dd>
+                <dt>Fuel</dt>
+                <dd>{vinInfo.fuel ?? "—"}</dd>
+                <dt>Cylinders</dt>
+                <dd>{vinInfo.cylinders ?? "—"}</dd>
+                <dt>Displacement (L)</dt>
+                <dd>{vinInfo.displacement ?? "—"}</dd>
+                <dt>Engine HP</dt>
+                <dd>{vinInfo.engineHp ?? "—"}</dd>
 
-                <dt>MSRP</dt><dd>{vinInfo.msrp != null ? `$${vinInfo.msrp.toLocaleString()}` : "—"}</dd>
+                <dt>MSRP</dt>
+                <dd>
+                  {vinInfo.msrp != null
+                    ? `$${vinInfo.msrp.toLocaleString()}`
+                    : "—"}
+                </dd>
               </dl>
             </div>
           )}
         </section>
 
-        {/* BODY: Center column (Vehicle & Pricing) */}
+        {/* CENTER: Vehicle & Pricing */}
         <section className="panel col-2">
           <div className="panel-head">
             <h3 className="panel-title">Vehicle & Pricing</h3>
@@ -346,7 +434,10 @@ export default function App() {
           <NumberField
             label="Vehicle price"
             value={cfg.price}
-            onChange={(v) => { setCfg({ ...cfg, price: v }); setPriceDirty(true); }}
+            onChange={(v) => {
+              setCfg({ ...cfg, price: v });
+              setPriceDirty(true);
+            }}
           />
           <NumberField
             label="Down payment"
@@ -355,17 +446,35 @@ export default function App() {
           />
 
           <div className="two">
-            <NumberField label="Trade-in value" value={cfg.tradeIn} onChange={(v) => setCfg({ ...cfg, tradeIn: v })} />
-            <NumberField label="Trade-in payoff" value={cfg.tradeInPayoff} onChange={(v) => setCfg({ ...cfg, tradeInPayoff: v })} />
+            <NumberField
+              label="Trade-in value"
+              value={cfg.tradeIn}
+              onChange={(v) => setCfg({ ...cfg, tradeIn: v })}
+            />
+            <NumberField
+              label="Trade-in payoff"
+              value={cfg.tradeInPayoff}
+              onChange={(v) => setCfg({ ...cfg, tradeInPayoff: v })}
+            />
           </div>
 
           <div className="two">
-            <NumberField label="Sales tax %" step={0.25} value={cfg.taxRate} onChange={(v) => setCfg({ ...cfg, taxRate: v })} />
+            <NumberField
+              label="Sales tax %"
+              step={0.25}
+              value={cfg.taxRate}
+              onChange={(v) => setCfg({ ...cfg, taxRate: v })}
+            />
             <label className="field">
               <span className="label">Tax rule</span>
               <select
                 value={cfg.taxRule}
-                onChange={(e) => setCfg({ ...cfg, taxRule: e.target.value as LoanConfig["taxRule"] })}
+                onChange={(e) =>
+                  setCfg({
+                    ...cfg,
+                    taxRule: e.target.value as LoanConfig["taxRule"],
+                  })
+                }
               >
                 <option value="price_minus_tradein">Tax price − trade-in</option>
                 <option value="price_full">Tax full price</option>
@@ -374,7 +483,7 @@ export default function App() {
           </div>
         </section>
 
-        {/* BODY: Right column (Decision + Charts) */}
+        {/* RIGHT: Decision + Charts */}
         <section className="right-col col-3">
           <div className="mini-card">
             <div className="mini-label">Decision</div>
@@ -382,9 +491,21 @@ export default function App() {
               {evalLoading ? "Calculating…" : approved ? "APPROVED" : "DECLINED"}
             </div>
             <div className="mini-grid">
-              <div><span>LTV</span><strong>{pct(evalResult?.features.ltv ?? 0)}</strong></div>
-              <div><span>DTI</span><strong>{pct(evalResult?.features.dti ?? 0)}</strong></div>
-              <div><span>PD</span><strong>{pct(evalResult?.risk.pd ?? 0)} <small>conf {pct(evalResult?.risk.confidence ?? 0)}</small></strong></div>
+              <div>
+                <span>LTV</span>
+                <strong>{pct(evalResult?.features.ltv ?? 0)}</strong>
+              </div>
+              <div>
+                <span>DTI</span>
+                <strong>{pct(evalResult?.features.dti ?? 0)}</strong>
+              </div>
+              <div>
+                <span>PD</span>
+                <strong>
+                  {pct(evalResult?.risk.pd ?? 0)}{" "}
+                  <small>conf {pct(evalResult?.risk.confidence ?? 0)}</small>
+                </strong>
+              </div>
             </div>
             {evalError && <p className="vin-error">{evalError}</p>}
           </div>
@@ -447,6 +568,86 @@ export default function App() {
           </div>
         </section>
       </div>
+
+      {/* ====== Drawer (Option B, lightweight) ====== */}
+      {drawer && (
+        <>
+          <div className="drawer-mask" onClick={() => setDrawer(null)} />
+          <aside className="drawer">
+            <header className="drawer-head">
+              <h3>
+                {drawer === "compare" && "Compare"}
+                {drawer === "related" && "Related Resources"}
+                {drawer === "rebates" && "Vehicle Rebates"}
+                {drawer === "fees" && "Fees & Hidden Costs"}
+                {drawer === "strategies" && "Auto Loan Strategies"}
+              </h3>
+              <button className="btn small ghost" onClick={() => setDrawer(null)}>
+                Close
+              </button>
+            </header>
+
+            <div className="drawer-body">
+              {drawer === "compare" && (
+                <>
+                  <p>Quick compare of a few term/APR scenarios.</p>
+                  <table className="amort mini">
+                    <thead>
+                      <tr><th>Term</th><th>APR</th><th>Payment</th><th>Total Cost</th></tr>
+                    </thead>
+                    <tbody>
+                      {[36, 48, 60, 72].map((m) => {
+                        const cfgAlt = { ...cfg, termMonths: m };
+                        const s = computeSummary(cfgAlt);
+                        return (
+                          <tr key={m}>
+                            <td>{m} mo</td>
+                            <td>{cfg.apr.toFixed(2)}%</td>
+                            <td>{usd.format(s.payment)}</td>
+                            <td>{usd.format(s.totalCost)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
+              {drawer === "related" && (
+                <ul className="bullets">
+                  <li>APR ranges by credit score.</li>
+                  <li>Insurance cost estimates by vehicle class.</li>
+                  <li>State tax presets and rules.</li>
+                </ul>
+              )}
+
+              {drawer === "rebates" && (
+                <ul className="bullets">
+                  <li>OEM rebate — $500 (expires 12/31)</li>
+                  <li>First responder — $750</li>
+                  <li>EV federal credit — up to $7,500</li>
+                </ul>
+              )}
+
+              {drawer === "fees" && (
+                <ul className="bullets">
+                  <li>Doc/Registration: $200–$600</li>
+                  <li>Acquisition (lease): varies</li>
+                  <li>Warranty/GAP: optional add-ons</li>
+                </ul>
+              )}
+
+              {drawer === "strategies" && (
+                <ul className="bullets">
+                  <li>Bump down payment to cut total interest.</li>
+                  <li>Shorter term lowers cost (higher monthly).</li>
+                  <li>Refinance if rates drop.</li>
+                </ul>
+              )}
+            </div>
+          </aside>
+        </>
+      )}
 
       {/* -------- Amortization (full width) -------- */}
       <section className="panel wide">
