@@ -63,7 +63,8 @@ body{
 .two{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
 
 /* ====== VIN bits ====== */
-.vin-row{ display:grid; grid-template-columns:1fr auto; gap:10px; margin-bottom:8px }
+.vin-row{ display:grid; grid-template-columns:1fr auto; gap:10px; margin-bottom:8px; align-items:center; }
+
 .vin-samples{ margin:6px 0 10px }
 .vin-error{ color:#ff8a8a; margin:6px 0 0 }
 .vin-card{ border:1px dashed var(--border); border-radius:12px; padding:12px; margin-top:8px }
@@ -155,4 +156,33 @@ body{
   .right-col{ grid-template-columns: 1fr; }
   .col-1, .col-2{ min-height: unset; }
   .chart-box, .chart-box.donut{ height:220px; }
+}
+
+/* ==== VIN row: align Decode button with the input ==== */
+:root { --vin-control-h: 44px; }   
+
+.vin-row{
+  display: grid;
+  grid-template-columns: 1fr auto;  
+  column-gap: 12px;
+  align-items: end;                 
+}
+
+.vin-row .field{ margin: 0; }       
+
+.vin-row input{
+  height: var(--vin-control-h);     
+}
+
+.vin-row button.btn{
+  height: var(--vin-control-h);     
+  line-height: calc(var(--vin-control-h) - 2px); 
+  padding: 0 14px;
+  width: auto;                      
+}
+
+/* Optional: stack on small screens */
+@media (max-width: 560px){
+  .vin-row{ grid-template-columns: 1fr; align-items: stretch; }
+  .vin-row button.btn{ width: 100%; }
 }
