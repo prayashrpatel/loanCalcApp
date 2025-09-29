@@ -510,6 +510,42 @@ export default function App() {
             {evalError && <p className="vin-error">{evalError}</p>}
           </div>
 
+          {/* === NEW: Loan Summary (drop this right after the Decision card) === */}
+
+
+        {/* === NEW: Loan Summary (drop this right after the Decision card) === */}
+        <div className="mini-card">
+          <div className="mini-label">Loan Summary</div>
+          <div className="mini-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+            <div>
+              <span>Payment</span>
+              <strong>{usd.format(summary.payment)}</strong>
+            </div>
+            <div>
+              <span>Term</span>
+              <strong>{cfg.termMonths} mo</strong>
+            </div>
+            <div>
+              <span>APR</span>
+              <strong>{cfg.apr.toFixed(2)}%</strong>
+            </div>
+            <div>
+              <span>Financed</span>
+              <strong>{usd.format(financedAmount)}</strong>
+            </div>
+            <div>
+              <span>Total Interest</span>
+              <strong>{usd.format(summary.totalInterest)}</strong>
+            </div>
+            <div>
+              <span>Total Cost</span>
+              <strong>{usd.format(summary.totalCost)}</strong>
+            </div>
+          </div>
+        </div>
+
+
+
           <div className="mini-card">
             <div className="mini-label">Interest vs. Principal</div>
             <div className="chart-box donut">
