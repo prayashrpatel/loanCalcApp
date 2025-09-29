@@ -214,3 +214,41 @@ body{
   .col-1, .col-2{ min-height: unset; }
   .chart-box, .chart-box.donut{ height:220px; }
 }
+
+/* === Bigger Quickbar buttons/icons === */
+:root{
+  /* overall quickbar width */
+  --quickbarW: 88px; /* try 84–100px */
+}
+
+.page.has-quickbar{
+  /* keep content clear of the larger quickbar */
+  padding-left: calc(var(--quickbarW) + 28px);
+}
+
+.quickbar{
+  width: var(--quickbarW);
+  gap: 14px;                /* a little more breathing room */
+}
+
+.qbtn{
+  padding: 14px 10px;       /* taller buttons */
+  gap: 8px;                 /* more space between icon and label */
+  border-radius: 14px;
+}
+
+.qbtn .icon{
+  width: 24px;              /* was 20px */
+  height: 24px;
+  stroke-width: 2;          /* slightly bolder lines */
+}
+
+.qbtn span{
+  font-size: 12.5px;        /* was 11px */
+  line-height: 1.15;
+}
+
+/* Optional: if you also want the tooltip-like labels a bit brighter */
+.qbtn span{ color: #cbd5e1; } /* subtle lift from var(--muted) */
+
+
