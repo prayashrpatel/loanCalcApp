@@ -5,18 +5,15 @@
   --border: #1f2937;
   --muted: #8b949e;
   --text: #e6edf3;
-  --primary: #1f6feb;     /* links/accents */
-  --accent: #58a6ff;      /* charts */
-  --accent-2: #f2cc60;    /* charts (interest) */
+  --primary: #1f6feb;
+  --accent: #58a6ff;
+  --accent-2: #f2cc60;
   --radius: 16px;
   --shadow: 0 6px 24px rgba(0,0,0,.35);
   --gap: 20px;
-
-  /* Right rail width (decision + charts + hero mini-cards) */
   --rightW: 360px;
-
-  /* Shared control height for VIN row */
   --vin-control-h: 44px;
+  --quickbarW: 88px;
 }
 
 *{ box-sizing:border-box }
@@ -32,51 +29,42 @@ body{
   margin:0 auto; padding:24px 16px 80px;
   position: relative;
 }
-
-/* When quickbar is present, give left padding so content clears it */
 .page.has-quickbar{
-  padding-left: 96px; /* width of quickbar */
+  padding-left: calc(var(--quickbarW) + 28px);
 }
 
-/* ====== Quickbar (Option B) ====== */
+/* ====== Quickbar ====== */
 .quickbar{
   position: fixed;
   left: 16px;
   top: 110px;
-  width: 64px;
+  width: var(--quickbarW);
   display: grid;
-  gap: 12px;
+  gap: 14px;
   z-index: 20;
 }
 .qbtn{
   display: grid;
   justify-items: center;
-  gap: 6px;
-  padding: 10px 8px;
+  gap: 8px;
+  padding: 14px 10px;
   border: 1px solid var(--border);
   background: #0c1426;
   color: var(--text);
-  border-radius: 12px;
+  border-radius: 14px;
   cursor: pointer;
 }
-.qbtn .icon{ width: 20px; height: 20px; stroke: currentColor; fill:none; stroke-width:1.8 }
-.qbtn span{ font-size: 11px; color: var(--muted); }
+.qbtn .icon{ width: 24px; height: 24px; stroke: currentColor; fill:none; stroke-width:2 }
+.qbtn span{ font-size: 12.5px; line-height:1.15; color:#cbd5e1 }
 
 /* Drawer */
-.drawer-mask{
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.35);
-  z-index: 30;
-}
+.drawer-mask{ position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 30; }
 .drawer{
   position: fixed; top: 0; right: 0; height: 100vh; width: min(420px, 92vw);
   background: var(--panel); border-left: 1px solid var(--border);
   box-shadow: var(--shadow); z-index: 31; display:flex; flex-direction: column;
 }
-.drawer-head{
-  display:flex; align-items:center; justify-content:space-between;
-  padding: 16px 18px; border-bottom:1px solid var(--border)
-}
+.drawer-head{ display:flex; align-items:center; justify-content:space-between; padding: 16px 18px; border-bottom:1px solid var(--border) }
 .drawer-body{ padding: 14px 18px; overflow:auto }
 .bullets{ margin: 8px 0 0 18px }
 .bullets li{ margin: 6px 0 }
@@ -89,7 +77,6 @@ body{
 .btn.primary{ background:var(--primary); border-color:transparent }
 .btn.ghost{ background:transparent }
 .btn.small{ padding:6px 10px; font-size:12px; min-height:unset }
-
 .chip{
   padding:6px 10px; background:#0c1426; border:1px solid var(--border);
   border-radius:100px; color:var(--text)
@@ -115,15 +102,9 @@ body{
 .two{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
 
 /* ====== VIN bits ====== */
-.vin-row{
-  display:grid; grid-template-columns: 1fr auto; gap:10px; margin-bottom:8px;
-  align-items: end;
-}
+.vin-row{ display:grid; grid-template-columns: 1fr auto; gap:10px; margin-bottom:8px; align-items: end; }
 .vin-row input{ height: var(--vin-control-h) }
-.vin-row button.btn{
-  height: var(--vin-control-h); padding: 10px 14px; white-space: nowrap;
-}
-
+.vin-row button.btn{ height: var(--vin-control-h); padding: 10px 14px; white-space: nowrap; }
 .vin-samples{ margin:6px 0 10px }
 .vin-error{ color:#ff8a8a; margin:6px 0 0 }
 .vin-card{ border:1px dashed var(--border); border-radius:12px; padding:12px; margin-top:8px }
@@ -150,7 +131,7 @@ body{
 .unit{ font-size:.45em; color:var(--muted) }
 .hero-sub{ color:var(--muted); margin:6px 0 12px }
 
-/* mini cards used in hero-right and right column */
+/* ====== mini cards ====== */
 .mini-card{
   background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
   padding:16px 16px; box-shadow:var(--shadow); width:100%;
@@ -158,9 +139,19 @@ body{
 .mini-label{ color:var(--muted); font-size:12px; margin-bottom:4px }
 .mini-value{ font-weight:600; font-size:20px }
 .mini-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px }
-.badge{ display:inline-block; padding:4px 10px; border-radius:100px; border:1px solid var(--border); background:#111827 }
-.badge.ok{ background:#0b2e15; border-color:#1d4d2b; color:#8bffb6 }
-.badge.bad{ background:#381010; border-color:#5a1f1f; color:#ffb3b3 }
+
+/* unified badge styles */
+.badge { 
+  border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 600; letter-spacing: .4px;
+  border: 1px solid var(--border);
+  display: inline-block;
+  opacity: 0; transform: translateY(-2px);
+  animation: fadeInBadge .4s ease-out forwards;
+}
+.badge.ok     { background: linear-gradient(90deg,#1f6b36,#56d364); color:#e6edf3; }
+.badge.medium { background: linear-gradient(90deg,#8b6b00,#f2cc60); color:#0c1426; }
+.badge.bad    { background: linear-gradient(90deg,#6b1f1f,#ff7b72); color:#fff; }
+@keyframes fadeInBadge { to { opacity: 1; transform: translateY(0); } }
 
 /* ====== Unified grid for hero + body ====== */
 .content-grid{
@@ -172,28 +163,21 @@ body{
 }
 .hero-left{ grid-column: 1 / 3; justify-self: stretch; }
 .hero-card{ width:100%; padding:20px; }
-
-.hero-right{
-  grid-column: 3;
-  display: grid;
-  gap: 12px;
-}
-
-/* body columns */
+.hero-right{ grid-column: 3; display: grid; gap: 12px; }
 .col-1{ grid-column: 1; }
 .col-2{ grid-column: 2; }
 .col-3{ grid-column: 3; }
-
-/* Set some minimum heights */
 .col-1, .col-2{ min-height: 520px; }
-
-/* right column container so cards stack neatly */
 .right-col{ display:grid; gap:12px; width:100% }
 
 /* ====== Charts ====== */
 .chart-box{ height:250px; }
 .chart-box.donut{ height:270px }
 .chart-title{ color:var(--muted); margin-bottom:8px }
+.charts-2{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; align-items:stretch; }
+.mini-card.chart{ display:flex; flex-direction:column }
+.mini-card.chart .chart-box{ flex:1; height:auto; min-height:270px }
+@media (max-width:1200px){ .charts-2{ grid-template-columns:1fr } }
 
 /* ====== Amortization table ====== */
 .amort-wrap{ overflow:auto; border:1px solid var(--border); border-radius:12px; max-height: 600px; }
@@ -215,40 +199,71 @@ body{
   .chart-box, .chart-box.donut{ height:220px; }
 }
 
-/* === Bigger Quickbar buttons/icons === */
-:root{
-  /* overall quickbar width */
-  --quickbarW: 88px; /* try 84–100px */
+/* ========== Ownership Card Fine-Tuning ========== */
+.mini-card .field { display: flex; flex-direction: column; gap: 4px; }
+.mini-card .field input {
+  background: #0c1426; border: 1px solid #30363d; color: #e6edf3;
+  height: 34px; padding: 6px 8px; border-radius: 8px; font-size: 14px;
+}
+.mini-card .field input:focus { border-color: #58a6ff; outline: none; }
+.mini-kv { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; }
+.mini-card:hover { box-shadow: 0 0 0 1px #1f2937, 0 0 8px rgba(88,166,255,0.1); transition: box-shadow 0.15s ease-in-out; }
+
+/* global muted text */
+.muted{ color: var(--muted); }
+
+/* smooth scroll + quickbar active */
+html { scroll-behavior: smooth; }
+.qbtn.active{
+  border-color:#2d81ff;
+  box-shadow: 0 0 0 2px rgba(45,129,255,.12) inset;
+  color:#e6edf3;
 }
 
-.page.has-quickbar{
-  /* keep content clear of the larger quickbar */
-  padding-left: calc(var(--quickbarW) + 28px);
+/* Ownership section layout */
+.ownership-grid{ display:grid; grid-template-columns: minmax(0, 1fr) 320px; gap:16px; }
+.ownership-aside{ border:1px dashed var(--border); border-radius:12px; padding:12px; background:#0c1426; }
+@media (max-width: 980px){ .ownership-grid{ grid-template-columns: 1fr; } .ownership-aside{ margin-top: 8px; } }
+
+/* Compare Scenarios modal shell */
+.compare-backdrop{ position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 60; }
+.compare-modal{ position: fixed; inset: 0; display: grid; place-items: center; z-index: 61; }
+.compare-card{
+  width: min(920px, 94vw); max-height: 86vh; overflow:auto;
+  background: var(--panel); border:1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px;
 }
 
-.quickbar{
-  width: var(--quickbarW);
-  gap: 14px;                /* a little more breathing room */
+/* ===== Flat badge colors (override gradients) ===== */
+.badge {
+  background: #111827;
+  border: 1px solid #30363d;
+  color: #e6edf3;
 }
 
-.qbtn{
-  padding: 14px 10px;       /* taller buttons */
-  gap: 8px;                 /* more space between icon and label */
-  border-radius: 14px;
+/* success */
+.badge.ok,
+.mini-card .badge.ok {
+  background: #144a2a !important;   /* flat green */
+  border-color: #1d4d2b !important;
+  color: #8bffb6 !important;
+  box-shadow: none !important;
 }
 
-.qbtn .icon{
-  width: 24px;              /* was 20px */
-  height: 24px;
-  stroke-width: 2;          /* slightly bolder lines */
+/* medium */
+.badge.medium {
+  background: #3a2f11 !important;   /* flat amber */
+  border-color: #6b5400 !important;
+  color: #f2cc60 !important;
+  box-shadow: none !important;
 }
 
-.qbtn span{
-  font-size: 12.5px;        /* was 11px */
-  line-height: 1.15;
+/* danger */
+.badge.bad,
+.mini-card .badge.bad {
+  background: #3a1414 !important;   /* flat red */
+  border-color: #5a1f1f !important;
+  color: #ffb3b3 !important;
+  box-shadow: none !important;
 }
-
-/* Optional: if you also want the tooltip-like labels a bit brighter */
-.qbtn span{ color: #cbd5e1; } /* subtle lift from var(--muted) */
-
 

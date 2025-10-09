@@ -1,3 +1,5 @@
+import OwnershipCompare from "./components/OwnershipCompare";
+import OwnershipCostCard from "./components/OwnershipCostCard";
 import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 
@@ -101,6 +103,14 @@ const IconReceipt = () => (
 const IconLightbulb = () => (
   <svg className="icon" viewBox="0 0 24 24"><path d="M9 18h6M8 14a6 6 0 1 1 8 0c-1 1-1 2-1 3H9c0-1 0-2-1-3Z" /><path d="M10 22h4" /></svg>
 );
+/* NEW: donut/pie icon for Compare Ownership */
+const IconDonut = () => (
+  <svg className="icon" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2"/>
+    <path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
+    <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="2"/>
+  </svg>
+);
 
 /* ======================== APP ======================== */
 export default function App() {
@@ -127,9 +137,15 @@ export default function App() {
   type SidebarKey = "compare" | "related" | "rebates" | "fees" | "strategies" | null;
   const [drawer, setDrawer] = useState<SidebarKey>(null);
 
+  // NEW: compare scenarios modal state
+  const [showCompare, setShowCompare] = useState(false);
+
   useEffect(() => {
     function onEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") setDrawer(null);
+      if (e.key === "Escape") {
+        setDrawer(null);
+        setShowCompare(false);
+      }
     }
     window.addEventListener("keydown", onEsc);
     return () => window.removeEventListener("keydown", onEsc);
@@ -162,9 +178,7 @@ export default function App() {
         if (alive) setEvalLoading(false);
       }
     })();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [cfg, borrower]);
 
   /* -------------------- tax preset by state -------------------- */
@@ -189,9 +203,7 @@ export default function App() {
         if (alive) setOffersLoading(false);
       }
     })();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [cfg, borrower, evalResult?.rules.approved]);
 
   /* -------------------- VIN handler -------------------- */
@@ -238,46 +250,63 @@ export default function App() {
 
   const approved = evalResult?.rules.approved ?? false;
 
+  /* -------- Smooth jump + active highlight for #ownership -------- */
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+
+  function jumpTo(id: string) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    history.replaceState(null, "", `#${id}`);
+  }
+
+  // Auto-jump if the page loads with #ownership
+  useEffect(() => {
+    if (location.hash === "#ownership") {
+      setTimeout(() => jumpTo("ownership"), 50);
+    }
+  }, []);
+
+  // Observe the ownership section to toggle quickbar "active" state
+  useEffect(() => {
+    const target = document.getElementById("ownership");
+    if (!target) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setActiveSection(entry.isIntersecting ? "ownership" : null),
+      { rootMargin: "-30% 0px -60% 0px" }
+    );
+    obs.observe(target);
+    return () => obs.disconnect();
+  }, []);
+
   /* ======================== RENDER ======================== */
   return (
     <div className="page has-quickbar">
       {/* -------- Top Nav -------- */}
       <header className="topnav">
-        <div className="brand">
-          Auto <strong>Loan Calculator</strong>
-        </div>
-        <nav className="links">
-          <a>Home</a>
-          <a>Features</a>
-          <a>Contact</a>
-        </nav>
-        <div className="auth">
-          <button className="btn small ghost">Log in</button>
-        </div>
+        <div className="brand">Auto <strong>Loan Calculator</strong></div>
+        <nav className="links"><a>Home</a><a>Features</a><a>Contact</a></nav>
+        <div className="auth"><button className="btn small ghost">Log in</button></div>
       </header>
 
       {/* ---- Slim Vertical Quickbar (Option B) ---- */}
       <aside className="quickbar" role="navigation" aria-label="Helpful panels">
-        <button className="qbtn" onClick={() => setDrawer("compare")}>
-          <IconCompare />
-          <span>Compare</span>
+        <button className="qbtn" onClick={() => setDrawer("compare")}><IconCompare /><span>Compare</span></button>
+        <button className="qbtn" onClick={() => setDrawer("related")}><IconLink /><span>Related</span></button>
+        <button className="qbtn" onClick={() => setDrawer("rebates")}><IconTag /><span>Vehicle Rebates</span></button>
+        <button className="qbtn" onClick={() => setDrawer("fees")}><IconReceipt /><span>Fees</span></button>
+
+        {/* NEW: Compare Ownership button */}
+        <button
+          className={`qbtn ${activeSection === "ownership" ? "active" : ""}`}
+          onClick={() => jumpTo("ownership")}
+          title="See real ownership costs and compare scenarios"
+        >
+          <IconDonut />
+          <span>Compare Ownership</span>
         </button>
-        <button className="qbtn" onClick={() => setDrawer("related")}>
-          <IconLink />
-          <span>Related</span>
-        </button>
-        <button className="qbtn" onClick={() => setDrawer("rebates")}>
-          <IconTag />
-          <span>Vehicle Rebates</span>
-        </button>
-        <button className="qbtn" onClick={() => setDrawer("fees")}>
-          <IconReceipt />
-          <span>Fees</span>
-        </button>
-        <button className="qbtn" onClick={() => setDrawer("strategies")}>
-          <IconLightbulb />
-          <span>AutoLoan Strategies</span>
-        </button>
+
+        <button className="qbtn" onClick={() => setDrawer("strategies")}><IconLightbulb /><span>AutoLoan Strategies</span></button>
       </aside>
 
       {/* ======= HERO + BODY GRID ======= */}
@@ -285,9 +314,7 @@ export default function App() {
         {/* HERO LEFT */}
         <section className="hero-left">
           <div className="panel hero-card">
-            <div className="hero-amount">
-              {usd.format(summary.payment)} <span className="unit">/mo</span>
-            </div>
+            <div className="hero-amount">{usd.format(summary.payment)} <span className="unit">/mo</span></div>
             <p className="hero-sub">Estimated monthly payment</p>
             <button className="btn primary">See details</button>
           </div>
@@ -295,26 +322,14 @@ export default function App() {
 
         {/* HERO RIGHT mini-cards */}
         <aside className="hero-right">
-          <div className="mini-card">
-            <div className="mini-label">Financed amount</div>
-            <div className="mini-value">{usd.format(financedAmount)}</div>
-          </div>
-          <div className="mini-card">
-            <div className="mini-label">APR</div>
-            <div className="mini-value">{cfg.apr.toFixed(3)}%</div>
-          </div>
-          <div className="mini-card">
-            <div className="mini-label">Total cost</div>
-            <div className="mini-value">{usd.format(summary.totalCost)}</div>
-          </div>
+          <div className="mini-card"><div className="mini-label">Financed amount</div><div className="mini-value">{usd.format(financedAmount)}</div></div>
+          <div className="mini-card"><div className="mini-label">APR</div><div className="mini-value">{cfg.apr.toFixed(3)}%</div></div>
+          <div className="mini-card"><div className="mini-label">Total cost</div><div className="mini-value">{usd.format(summary.totalCost)}</div></div>
         </aside>
 
         {/* LEFT: VIN */}
         <section className="panel col-1">
-          <div className="panel-head">
-            <h3 className="panel-title">VIN Decoder</h3>
-          </div>
-
+          <div className="panel-head"><h3 className="panel-title">VIN Decoder</h3></div>
           <div className="vin-row">
             <label className="field" style={{ margin: 0 }}>
               <span className="label">VIN</span>
@@ -332,7 +347,6 @@ export default function App() {
                 aria-invalid={!!vinError}
               />
             </label>
-
             <button
               className="btn ghost"
               onClick={onDecodeVin}
@@ -343,83 +357,36 @@ export default function App() {
               {vinLoading ? "Decoding…" : "Decode VIN"}
             </button>
           </div>
-
           <div className="vin-samples">
-            <button
-              type="button"
-              className="chip"
-              onClick={() => setVin("1HGCM82633A004352")}
-              title="Use sample VIN"
-            >
-              Try sample VIN
-            </button>
+            <button type="button" className="chip" onClick={() => setVin("1HGCM82633A004352")} title="Use sample VIN">Try sample VIN</button>
           </div>
-
-          {vinError && (
-            <p className="vin-error" role="alert">
-              {String(vinError)}
-            </p>
-          )}
-
+          {vinError && <p className="vin-error" role="alert">{String(vinError)}</p>}
           {vinInfo && (
             <div className="vin-card">
               <div className="vin-title">
                 <div className="title">
-                  {vinInfo.title ??
-                    `${vinInfo.year ?? "—"} ${vinInfo.make ?? ""} ${
-                      vinInfo.model ?? ""
-                    }`.trim()}
+                  {vinInfo.title ?? `${vinInfo.year ?? "—"} ${vinInfo.make ?? ""} ${vinInfo.model ?? ""}`.trim()}
                 </div>
                 <div className="sub">
                   VIN: <code>{vinInfo.vin}</code>
-                  <button
-                    className="copy"
-                    onClick={() => navigator.clipboard.writeText(vinInfo.vin)}
-                    title="Copy VIN"
-                  >
-                    Copy
-                  </button>
+                  <button className="copy" onClick={() => navigator.clipboard.writeText(vinInfo.vin)} title="Copy VIN">Copy</button>
                 </div>
               </div>
-
-              {vinInfo.summary && (
-                <p className="vin-summary">{vinInfo.summary}</p>
-              )}
-
+              {vinInfo.summary && <p className="vin-summary">{vinInfo.summary}</p>}
               <dl className="vin-kv">
-                <dt>Year</dt>
-                <dd>{vinInfo.year ?? "—"}</dd>
-                <dt>Make</dt>
-                <dd>{vinInfo.make ?? "—"}</dd>
-                <dt>Model</dt>
-                <dd>{vinInfo.model ?? "—"}</dd>
-                <dt>Trim</dt>
-                <dd>{vinInfo.trim ?? "—"}</dd>
-
-                <dt>Body</dt>
-                <dd>{vinInfo.body ?? "—"}</dd>
-                <dt>Doors</dt>
-                <dd>{vinInfo.doors ?? "—"}</dd>
-                <dt>Drive</dt>
-                <dd>{vinInfo.drive ?? "—"}</dd>
-                <dt>Transmission</dt>
-                <dd>{vinInfo.transmission ?? "—"}</dd>
-
-                <dt>Fuel</dt>
-                <dd>{vinInfo.fuel ?? "—"}</dd>
-                <dt>Cylinders</dt>
-                <dd>{vinInfo.cylinders ?? "—"}</dd>
-                <dt>Displacement (L)</dt>
-                <dd>{vinInfo.displacement ?? "—"}</dd>
-                <dt>Engine HP</dt>
-                <dd>{vinInfo.engineHp ?? "—"}</dd>
-
-                <dt>MSRP</dt>
-                <dd>
-                  {vinInfo.msrp != null
-                    ? `$${vinInfo.msrp.toLocaleString()}`
-                    : "—"}
-                </dd>
+                <dt>Year</dt><dd>{vinInfo.year ?? "—"}</dd>
+                <dt>Make</dt><dd>{vinInfo.make ?? "—"}</dd>
+                <dt>Model</dt><dd>{vinInfo.model ?? "—"}</dd>
+                <dt>Trim</dt><dd>{vinInfo.trim ?? "—"}</dd>
+                <dt>Body</dt><dd>{vinInfo.body ?? "—"}</dd>
+                <dt>Doors</dt><dd>{vinInfo.doors ?? "—"}</dd>
+                <dt>Drive</dt><dd>{vinInfo.drive ?? "—"}</dd>
+                <dt>Transmission</dt><dd>{vinInfo.transmission ?? "—"}</dd>
+                <dt>Fuel</dt><dd>{vinInfo.fuel ?? "—"}</dd>
+                <dt>Cylinders</dt><dd>{vinInfo.cylinders ?? "—"}</dd>
+                <dt>Displacement (L)</dt><dd>{vinInfo.displacement ?? "—"}</dd>
+                <dt>Engine HP</dt><dd>{vinInfo.engineHp ?? "—"}</dd>
+                <dt>MSRP</dt><dd>{vinInfo.msrp != null ? `$${vinInfo.msrp.toLocaleString()}` : "—"}</dd>
               </dl>
             </div>
           )}
@@ -427,54 +394,20 @@ export default function App() {
 
         {/* CENTER: Vehicle & Pricing */}
         <section className="panel col-2">
-          <div className="panel-head">
-            <h3 className="panel-title">Vehicle & Pricing</h3>
-          </div>
-
-          <NumberField
-            label="Vehicle price"
-            value={cfg.price}
-            onChange={(v) => {
-              setCfg({ ...cfg, price: v });
-              setPriceDirty(true);
-            }}
-          />
-          <NumberField
-            label="Down payment"
-            value={cfg.down}
-            onChange={(v) => setCfg({ ...cfg, down: v })}
-          />
-
+          <div className="panel-head"><h3 className="panel-title">Vehicle & Pricing</h3></div>
+          <NumberField label="Vehicle price" value={cfg.price} onChange={(v) => { setCfg({ ...cfg, price: v }); setPriceDirty(true); }} />
+          <NumberField label="Down payment" value={cfg.down} onChange={(v) => setCfg({ ...cfg, down: v })} />
           <div className="two">
-            <NumberField
-              label="Trade-in value"
-              value={cfg.tradeIn}
-              onChange={(v) => setCfg({ ...cfg, tradeIn: v })}
-            />
-            <NumberField
-              label="Trade-in payoff"
-              value={cfg.tradeInPayoff}
-              onChange={(v) => setCfg({ ...cfg, tradeInPayoff: v })}
-            />
+            <NumberField label="Trade-in value" value={cfg.tradeIn} onChange={(v) => setCfg({ ...cfg, tradeIn: v })} />
+            <NumberField label="Trade-in payoff" value={cfg.tradeInPayoff} onChange={(v) => setCfg({ ...cfg, tradeInPayoff: v })} />
           </div>
-
           <div className="two">
-            <NumberField
-              label="Sales tax %"
-              step={0.25}
-              value={cfg.taxRate}
-              onChange={(v) => setCfg({ ...cfg, taxRate: v })}
-            />
+            <NumberField label="Sales tax %" step={0.25} value={cfg.taxRate} onChange={(v) => setCfg({ ...cfg, taxRate: v })} />
             <label className="field">
               <span className="label">Tax rule</span>
               <select
                 value={cfg.taxRule}
-                onChange={(e) =>
-                  setCfg({
-                    ...cfg,
-                    taxRule: e.target.value as LoanConfig["taxRule"],
-                  })
-                }
+                onChange={(e) => setCfg({ ...cfg, taxRule: e.target.value as LoanConfig["taxRule"] })}
               >
                 <option value="price_minus_tradein">Tax price − trade-in</option>
                 <option value="price_full">Tax full price</option>
@@ -483,123 +416,85 @@ export default function App() {
           </div>
         </section>
 
-        {/* RIGHT: Decision + Charts */}
+        {/* RIGHT: Decision + Summary + Charts */}
         <section className="right-col col-3">
+          {/* Decision card */}
           <div className="mini-card">
             <div className="mini-label">Decision</div>
             <div className={`badge ${evalLoading ? "" : approved ? "ok" : "bad"}`}>
               {evalLoading ? "Calculating…" : approved ? "APPROVED" : "DECLINED"}
             </div>
             <div className="mini-grid">
-              <div>
-                <span>LTV</span>
-                <strong>{pct(evalResult?.features.ltv ?? 0)}</strong>
-              </div>
-              <div>
-                <span>DTI</span>
-                <strong>{pct(evalResult?.features.dti ?? 0)}</strong>
-              </div>
+              <div><span>LTV</span><strong>{pct(evalResult?.features.ltv ?? 0)}</strong></div>
+              <div><span>DTI</span><strong>{pct(evalResult?.features.dti ?? 0)}</strong></div>
               <div>
                 <span>PD</span>
-                <strong>
-                  {pct(evalResult?.risk.pd ?? 0)}{" "}
-                  <small>conf {pct(evalResult?.risk.confidence ?? 0)}</small>
-                </strong>
+                <strong>{pct(evalResult?.risk.pd ?? 0)} <small>conf {pct(evalResult?.risk.confidence ?? 0)}</small></strong>
               </div>
             </div>
             {evalError && <p className="vin-error">{evalError}</p>}
           </div>
 
-          {/* === NEW: Loan Summary (drop this right after the Decision card) === */}
-
-
-        {/* === NEW: Loan Summary (drop this right after the Decision card) === */}
-        <div className="mini-card">
-          <div className="mini-label">Loan Summary</div>
-          <div className="mini-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            <div>
-              <span>Payment</span>
-              <strong>{usd.format(summary.payment)}</strong>
-            </div>
-            <div>
-              <span>Term</span>
-              <strong>{cfg.termMonths} mo</strong>
-            </div>
-            <div>
-              <span>APR</span>
-              <strong>{cfg.apr.toFixed(2)}%</strong>
-            </div>
-            <div>
-              <span>Financed</span>
-              <strong>{usd.format(financedAmount)}</strong>
-            </div>
-            <div>
-              <span>Total Interest</span>
-              <strong>{usd.format(summary.totalInterest)}</strong>
-            </div>
-            <div>
-              <span>Total Cost</span>
-              <strong>{usd.format(summary.totalCost)}</strong>
+          {/* Loan Summary card */}
+          <div className="mini-card">
+            <div className="mini-label">Loan Summary</div>
+            <div className="mini-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+              <div><span>Payment</span><strong>{usd.format(summary.payment)}</strong></div>
+              <div><span>Term</span><strong>{cfg.termMonths} mo</strong></div>
+              <div><span>APR</span><strong>{cfg.apr.toFixed(2)}%</strong></div>
+              <div><span>Financed</span><strong>{usd.format(financedAmount)}</strong></div>
+              <div><span>Total Interest</span><strong>{usd.format(summary.totalInterest)}</strong></div>
+              <div><span>Total Cost</span><strong>{usd.format(summary.totalCost)}</strong></div>
             </div>
           </div>
-        </div>
 
-
-
-          <div className="mini-card">
-            <div className="mini-label">Interest vs. Principal</div>
-            <div className="chart-box donut">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: "Principal", value: financedAmount },
-                      { name: "Interest", value: summary.totalInterest },
-                    ]}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius="60%"
-                    outerRadius="85%"
-                    paddingAngle={2}
+          {/* Charts row: line LEFT, donut RIGHT */}
+          <div className="charts-2">
+            <div className="mini-card chart">
+              <div className="mini-label">Remaining Balance</div>
+              <div className="chart-box line">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={schedule.map((r) => ({ month: r.period, balance: r.balance }))}
+                    margin={{ top: 6, right: 12, left: -10, bottom: 0 }}
                   >
-                    <Cell fill="#58a6ff" />
-                    <Cell fill="#f2cc60" />
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      background: "#0c1426",
-                      border: "1px solid #30363d",
-                      color: "#c9d1d9",
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+                    <CartesianGrid stroke="#21262d" strokeDasharray="3 3" />
+                    <XAxis dataKey="month" tick={{ fill: "#8b949e", fontSize: 12 }} />
+                    <YAxis tick={{ fill: "#8b949e", fontSize: 12 }} />
+                    <Tooltip
+                      formatter={(v: any) => usd.format(v as number)}
+                      labelFormatter={(l) => `Month ${l}`}
+                      contentStyle={{ background: "#0c1426", border: "1px solid #30363d", color: "#c9d1d9" }}
+                    />
+                    <Line type="monotone" dataKey="balance" stroke="#58a6ff" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-          </div>
 
-          <div className="mini-card">
-            <div className="mini-label">Remaining Balance</div>
-            <div className="chart-box line">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={schedule.map((r) => ({ month: r.period, balance: r.balance }))}
-                  margin={{ top: 6, right: 12, left: -10, bottom: 0 }}
-                >
-                  <CartesianGrid stroke="#21262d" strokeDasharray="3 3" />
-                  <XAxis dataKey="month" tick={{ fill: "#8b949e", fontSize: 12 }} />
-                  <YAxis tick={{ fill: "#8b949e", fontSize: 12 }} />
-                  <Tooltip
-                    formatter={(v: any) => usd.format(v as number)}
-                    labelFormatter={(l) => `Month ${l}`}
-                    contentStyle={{
-                      background: "#0c1426",
-                      border: "1px solid #30363d",
-                      color: "#c9d1d9",
-                    }}
-                  />
-                  <Line type="monotone" dataKey="balance" stroke="#58a6ff" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
+            <div className="mini-card chart">
+              <div className="mini-label">Interest vs. Principal</div>
+              <div className="chart-box donut">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: "Principal", value: financedAmount },
+                        { name: "Interest", value: summary.totalInterest },
+                      ]}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius="60%"
+                      outerRadius="85%"
+                      paddingAngle={2}
+                    >
+                      <Cell fill="#58a6ff" />
+                      <Cell fill="#f2cc60" />
+                    </Pie>
+                    <Tooltip contentStyle={{ background: "#0c1426", border: "1px solid #30363d", color: "#c9d1d9" }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </section>
@@ -618,9 +513,7 @@ export default function App() {
                 {drawer === "fees" && "Fees & Hidden Costs"}
                 {drawer === "strategies" && "Auto Loan Strategies"}
               </h3>
-              <button className="btn small ghost" onClick={() => setDrawer(null)}>
-                Close
-              </button>
+              <button className="btn small ghost" onClick={() => setDrawer(null)}>Close</button>
             </header>
 
             <div className="drawer-body">
@@ -685,21 +578,52 @@ export default function App() {
         </>
       )}
 
+      {/* ===== Ownership Cost – full-width (anchor target) ===== */}
+      <section id="ownership" className="panel wide">
+        <div className="panel-head">
+          <h3 className="panel-title">Ownership Cost (AI)</h3>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="chip" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+              ↑ Back to top
+            </button>
+            <a className="chip" href="#ownership">Shareable link</a>
+          </div>
+        </div>
+
+        <div className="ownership-grid">
+          {/* The card lives here now */}
+          <OwnershipCostCard
+            vin={vinInfo?.vin ?? (vin || undefined)}
+            defaultZip="94087"
+            defaultAnnualMiles={12000}
+          />
+
+          {/* Optional side column for notes/actions */}
+          <aside className="ownership-aside">
+            <p className="muted" style={{ marginTop: 4 }}>
+              Estimate includes <strong>fuel/charging</strong>, <strong>insurance</strong>, and
+              <strong> maintenance</strong> using your ZIP and miles. VIN improves accuracy
+              (class, age, MSRP).
+            </p>
+            <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+              <button className="btn small ghost" onClick={() => setShowCompare(true)}>
+                Compare scenarios
+              </button>
+              <button className="btn small ghost" onClick={() => alert("Coming soon: Export PDF")}>
+                Export
+              </button>
+            </div>
+          </aside>
+        </div>
+      </section>
+
       {/* -------- Amortization (full width) -------- */}
       <section className="panel wide">
-        <div className="panel-head">
-          <h3 className="panel-title">Amortization schedule</h3>
-        </div>
+        <div className="panel-head"><h3 className="panel-title">Amortization schedule</h3></div>
         <div className="amort-wrap">
           <table className="amort">
             <thead>
-              <tr>
-                <th>Month</th>
-                <th>Payment</th>
-                <th>Interest</th>
-                <th>Principal</th>
-                <th>Balance</th>
-              </tr>
+              <tr><th>Month</th><th>Payment</th><th>Interest</th><th>Principal</th><th>Balance</th></tr>
             </thead>
             <tbody>
               {schedule.map((r) => (
@@ -715,6 +639,14 @@ export default function App() {
           </table>
         </div>
       </section>
+
+      {/* ===== Compare Scenarios Modal ===== */}
+      {showCompare && (
+        <OwnershipCompare
+          vin={vinInfo?.vin ?? (vin || undefined)}
+          onClose={() => setShowCompare(false)}
+        />
+      )}
     </div>
   );
 }
